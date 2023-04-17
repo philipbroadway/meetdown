@@ -67,7 +67,7 @@ def write_markdown(filename, location):
 
 def generate_markdown():
     date_str = datetime.datetime.now().strftime("%m-%d-%y")
-    Path("{location}").mkdir(parents=True, exist_ok=True)
+    Path(MEETDOWN_FOLDER).mkdir(parents=True, exist_ok=True)
 
     markdown_content = f"# {date_str}"
     markdown_content += f"\n#{' #'.join(MEETDOWN_TAGS)} #{date_str}\n___\n"
@@ -75,7 +75,7 @@ def generate_markdown():
         markdown_content += f"\n## {username}\n\n"
         markdown_content += f"{TABLE_HEADER}\n"
         for task in tasks:
-            completed_checkbox = COMPLETED if task["completed"] else TODO
+            completed_checkbox = "✅" if task["completed"] else "☑️"
             blocker_note = " (Blocker)" if task.get("blocker", False) else ""
             if not task['id']:
               markdown_content += f"| `-` | {task['description']}{blocker_note} | {completed_checkbox} |\n"
