@@ -38,8 +38,8 @@ MEETDOWN_FOLDER = os.getenv("MEETDOWN_FOLDER") if os.getenv("MEETDOWN_FOLDER") e
 MEETDOWN_TICKET_BASE = os.getenv("MEETDOWN_TICKET_BASE") if os.getenv("MEETDOWN_TICKET_BASE") else ""# Add a default here if not using .env
 MEETDOWN_USERS = os.getenv("MEETDOWN_USERS").split('/') if os.getenv("MEETDOWN_USERS") else [os.environ.get('USER', os.environ.get('USERNAME'))]
 MEETDOWN_TAGS = os.getenv("MEETDOWN_TAGS").split('/') if os.getenv("MEETDOWN_TAGS") else ["r&d", "standup"]
-
 user_data = {}
+
 
 def add_todo(username, task_id, description):
     if username not in user_data:
@@ -90,32 +90,31 @@ def main(usernames):
     global MEETDOWN_FOLDER
     while True:
         os.system('clear')
-        banner = f"{ASCII}\n"
+        banner = f"{ASCII}"
         if os.getenv("MEETDOWN_DEBUG"):
           banner += f"$MEETDOWN_FOLDER: {MEETDOWN_FOLDER}\n"
           banner += f"$MEETDOWN_TAGS: {os.getenv('MEETDOWN_TAGS').split('/')}\n"
           banner += f"$MEETDOWN_USERS: {','.join(MEETDOWN_USERS)}\n"
-        banner += f"\nMarkdown:\n"
         banner += f"{generate_markdown()}\n"
         banner += f"{PROMPT}\n"
         print(banner)
 
         action = input(">")
-        
+        verb = ACTIONS[int(action)-1]
         if action == "1" or action == "2" or action == "3":
             
             selected_user_index = 0
             username = MEETDOWN_USERS[0]
 
             if len(MEETDOWN_USERS) > 1:
-              print("MEETDOWN_USERS:")
+              print(f"{verb} for?:")
               for i, username in enumerate(MEETDOWN_USERS, 1):
                 print(f"{i}. {username}")
               selected_user_index = int(input(">"))
               username = MEETDOWN_USERS[selected_user_index - 1]
 
             
-            task_id = input("Enter the task ID (blank if not jira): ")
+            task_id = input("Task ID? (blank if not jira): ")
             description = input("Enter the task description: ")
             
             if action == "1":
