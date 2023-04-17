@@ -20,6 +20,11 @@ Options:
 8 - Exit
 """
 
+TABLE_HEADER = """'
+| `Task ID` | `Description` | `Completed` |
+| :--- | :--- | :---: |
+"""
+
 import datetime
 import os
 from pathlib import Path
@@ -66,8 +71,7 @@ def generate_markdown():
     markdown_content += f"\n#{' #'.join(MEETDOWN_TAGS)} #{date_str}\n___\n"
     for username, tasks in user_data.items():
         markdown_content += f"\n## {username}\n\n"
-        markdown_content += "| `Task ID` | `Description` | `Completed` |\n"
-        markdown_content += "|---------|-------------|-----------|\n"
+        markdown_content += f"{TABLE_HEADER}\n"
         for task in tasks:
             completed_checkbox = "[x]" if task["completed"] else "[ ]"
             blocker_note = " (Blocker)" if task.get("blocker", False) else ""
