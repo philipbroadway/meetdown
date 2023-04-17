@@ -20,10 +20,12 @@ Options:
 8 - Exit
 """
 
-TABLE_HEADER = """'
+TABLE_HEADER = """
 | `Task ID` | `Description` | `Completed` |
-| :--- | :--- | :---: |
-"""
+|---|---|---|"""
+
+TODO="☑️"
+COMPLETED="✅"
 
 import datetime
 import os
@@ -73,7 +75,7 @@ def generate_markdown():
         markdown_content += f"\n## {username}\n\n"
         markdown_content += f"{TABLE_HEADER}\n"
         for task in tasks:
-            completed_checkbox = "[x]" if task["completed"] else "[ ]"
+            completed_checkbox = COMPLETED if task["completed"] else TODO
             blocker_note = " (Blocker)" if task.get("blocker", False) else ""
             if not task['id']:
               markdown_content += f"| `-` | {task['description']}{blocker_note} | {completed_checkbox} |\n"
@@ -89,9 +91,10 @@ def main(usernames):
     while True:
         os.system('clear')
         banner = f"{ASCII}\n"
-        banner += f"$MEETDOWN_FOLDER: {MEETDOWN_FOLDER}\n"
-        banner += f"$MEETDOWN_TAGS: {os.getenv('MEETDOWN_TAGS').split('/')}\n"
-        banner += f"$MEETDOWN_USERS: {','.join(MEETDOWN_USERS)}\n"
+        if os.getenv("MEETDOWN_DEBUG"):
+          banner += f"$MEETDOWN_FOLDER: {MEETDOWN_FOLDER}\n"
+          banner += f"$MEETDOWN_TAGS: {os.getenv('MEETDOWN_TAGS').split('/')}\n"
+          banner += f"$MEETDOWN_USERS: {','.join(MEETDOWN_USERS)}\n"
         banner += f"\nMarkdown:\n"
         banner += f"{generate_markdown()}\n"
         banner += f"{PROMPT}\n"
@@ -111,6 +114,7 @@ def main(usernames):
               selected_user_index = int(input(">"))
               username = MEETDOWN_USERS[selected_user_index - 1]
 
+            
             task_id = input("Enter the task ID (blank if not jira): ")
             description = input("Enter the task description: ")
             
@@ -149,6 +153,7 @@ def main(usernames):
             write_markdown(filename, MEETDOWN_FOLDER)
 
         elif action == "8":
+            os.system('clear')
             break
         else:
             print("Invalid action. Please choose a valid action number.")
