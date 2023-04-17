@@ -1,5 +1,26 @@
 #!/usr/bin/env python3
 
+ASCII="""
+███    ███ ███████ ███████ ████████ ██████   ██████  ██     ██ ███    ██ 
+████  ████ ██      ██         ██    ██   ██ ██    ██ ██     ██ ████   ██ 
+██ ████ ██ █████   █████      ██    ██   ██ ██    ██ ██  █  ██ ██ ██  ██ 
+██  ██  ██ ██      ██         ██    ██   ██ ██    ██ ██ ███ ██ ██  ██ ██ 
+██      ██ ███████ ███████    ██    ██████   ██████   ███ ███  ██   ████ 
+
+"""
+PROMPT = """
+Options:
+
+1 - Add Todo
+2 - Add Completed
+3 - Add Blocker
+4 - Add User
+5 - Add Tag
+6 - Change save location
+7 - Save to file
+8 - Exit
+"""
+
 import datetime
 import os
 from pathlib import Path
@@ -7,10 +28,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MEETDOWN_FOLDER = os.getenv("MEETDOWN_FOLDER") if os.getenv("MEETDOWN_FOLDER") else os.path.dirname(os.path.realpath(__file__))
+MEETDOWN_FOLDER = os.getenv("MEETDOWN_FOLDER") if os.getenv("MEETDOWN_FOLDER") else "/Users/philipbroadway/Documents/Obsidian\ Vault/pike13/standups"
 MEETDOWN_TICKET_BASE = os.getenv("MEETDOWN_TICKET_BASE") if os.getenv("MEETDOWN_TICKET_BASE") else ""
-usernames = os.getenv("MEETDOWN_USERS").split('/') if os.getenv("MEETDOWN_USERS") else [os.environ.get('USER', os.environ.get('USERNAME'))]
-tags = os.getenv("MEETDOWN_TAGS").split('/') if os.getenv("MEETDOWN_TAGS") else ["r&d", "standup"]
+MEETDOWN_USERS = os.getenv("MEETDOWN_USERS").split('/') if os.getenv("MEETDOWN_USERS") else [os.environ.get('USER', os.environ.get('USERNAME'))]
+MEETDOWN_TAGS = os.getenv("MEETDOWN_TAGS").split('/') if os.getenv("MEETDOWN_TAGS") else ["r&d", "standup"]
+
 user_data = {}
 
 def add_todo(username, task_id, description):
@@ -30,7 +52,7 @@ def add_blocker(username, task_id, description):
 
 def write_markdown(filename, location):
     
-    Path(f"{location}").mkdir(parents=True, exist_ok=True)
+    Path(location).mkdir(parents=True, exist_ok=True)
     markdown_content = generate_markdown()
 
     with open(f"{filename}", "w") as file:
@@ -42,7 +64,7 @@ def generate_markdown():
     Path("{location}").mkdir(parents=True, exist_ok=True)
 
     markdown_content = f"# {date_str}"
-    markdown_content += f"\n{' #'.join(tags)} #{date_str}\n___\n"
+    markdown_content += f"\n#{' #'.join(MEETDOWN_TAGS)} #{date_str}\n___\n"
     for username, tasks in user_data.items():
         markdown_content += f"\n## {username}\n\n"
         markdown_content += "| `Task ID` | `Description` | `Completed` |\n"
@@ -59,48 +81,33 @@ def generate_markdown():
 
     return markdown_content
 
-def main_loop(usernames):
+def main(usernames):
     global MEETDOWN_FOLDER
     while True:
         os.system('clear')
-        banner = f"""
-███    ███ ███████ ███████ ████████ ██████   ██████  ██     ██ ███    ██ 
-████  ████ ██      ██         ██    ██   ██ ██    ██ ██     ██ ████   ██ 
-██ ████ ██ █████   █████      ██    ██   ██ ██    ██ ██  █  ██ ██ ██  ██ 
-██  ██  ██ ██      ██         ██    ██   ██ ██    ██ ██ ███ ██ ██  ██ ██ 
-██      ██ ███████ ███████    ██    ██████   ██████   ███ ███  ██   ████ 
-$MEETDOWN_FOLDER: {MEETDOWN_FOLDER}
-$MEETDOWN_TAGS: {os.getenv("MEETDOWN_TAGS").split('/')}
-$MEETDOWN_USERS: {",".join(usernames)}
-Preview:
-{generate_markdown()}
-Choose an action:
-1 - Add Todo
-2 - Add Completed
-3 - Add Blocker
-4 - Add User
-5 - Add Tag
-6 - Change save location
-7 - Save to file
-8 - Exit
-"""
+        banner = f"{ASCII}\n"
+        banner += f"$MEETDOWN_FOLDER: {MEETDOWN_FOLDER}\n"
+        banner += f"$MEETDOWN_TAGS: {os.getenv('MEETDOWN_TAGS').split('/')}\n"
+        banner += f"$MEETDOWN_USERS: {','.join(MEETDOWN_USERS)}\n"
+        banner += f"\nMarkdown:\n"
+        banner += f"{generate_markdown()}\n"
+        banner += f"{PROMPT}\n"
         print(banner)
-        print(os.getenv("MEETDOWN_TAGS"))
-        action = input("Enter the action number: ")
+
+        action = input(">")
         
         if action == "1" or action == "2" or action == "3":
             
             selected_user_index = 0
-            username = usernames[0]
+            username = MEETDOWN_USERS[0]
 
-            if len(usernames) > 1:
-              print("Usernames:")
-              for i, username in enumerate(usernames, 1):
+            if len(MEETDOWN_USERS) > 1:
+              print("MEETDOWN_USERS:")
+              for i, username in enumerate(MEETDOWN_USERS, 1):
                 print(f"{i}. {username}")
-              selected_user_index = int(input("Select a user by entering the corresponding number: "))
-              username = usernames[selected_user_index - 1]
+              selected_user_index = int(input(">"))
+              username = MEETDOWN_USERS[selected_user_index - 1]
 
-            
             task_id = input("Enter the task ID (blank if not jira): ")
             description = input("Enter the task description: ")
             
@@ -112,17 +119,17 @@ Choose an action:
                 add_blocker(username, task_id, description)
         elif action == "4":
             username = input("Enter the username: ")
-            if username not in usernames:
-              usernames.append(username)
+            if username not in MEETDOWN_USERS:
+              MEETDOWN_USERS.append(username)
             else:
-                usernames.append(f"{username}-{len(usernames)})")
+                MEETDOWN_USERS.append(f"{username}-{len(MEETDOWN_USERS)})")
         
         elif action == "5":
             tag = input("Enter the tag: ")
-            if tag not in tags:
-              tags.append(tag)
+            if tag not in MEETDOWN_TAGS:
+              MEETDOWN_TAGS.append(tag)
             else:
-                tags.append(f"{tag}-{len(tags)})")
+                MEETDOWN_TAGS.append(f"{tag}-{len(MEETDOWN_TAGS)})")
         
         elif action == "6":
             new_location = input("Enter the folder path: ")
@@ -143,4 +150,4 @@ Choose an action:
         else:
             print("Invalid action. Please choose a valid action number.")
 
-main_loop(usernames)
+main(MEETDOWN_USERS)
