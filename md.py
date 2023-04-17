@@ -75,7 +75,7 @@ def generate_markdown():
         markdown_content += f"\n## {username}\n\n"
         markdown_content += f"{TABLE_HEADER}\n"
         for task in tasks:
-            completed_checkbox = "✅" if task["completed"] else "☑️"
+            completed_checkbox = COMPLETED if task["completed"] else TODO
             blocker_note = " (Blocker)" if task.get("blocker", False) else ""
             if not task['id']:
               markdown_content += f"| `-` | {task['description']}{blocker_note} | {completed_checkbox} |\n"
