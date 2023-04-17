@@ -27,8 +27,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MEETDOWN_FOLDER = os.getenv("MEETDOWN_FOLDER") if os.getenv("MEETDOWN_FOLDER") else "/Users/philipbroadway/Documents/Obsidian\ Vault/pike13/standups"
-MEETDOWN_TICKET_BASE = os.getenv("MEETDOWN_TICKET_BASE") if os.getenv("MEETDOWN_TICKET_BASE") else ""
+MEETDOWN_FOLDER = os.getenv("MEETDOWN_FOLDER") if os.getenv("MEETDOWN_FOLDER") else ""# Add a default here if not using .env
+MEETDOWN_TICKET_BASE = os.getenv("MEETDOWN_TICKET_BASE") if os.getenv("MEETDOWN_TICKET_BASE") else ""# Add a default here if not using .env
 MEETDOWN_USERS = os.getenv("MEETDOWN_USERS").split('/') if os.getenv("MEETDOWN_USERS") else [os.environ.get('USER', os.environ.get('USERNAME'))]
 MEETDOWN_TAGS = os.getenv("MEETDOWN_TAGS").split('/') if os.getenv("MEETDOWN_TAGS") else ["r&d", "standup"]
 
