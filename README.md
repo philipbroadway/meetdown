@@ -23,8 +23,8 @@ source .env
 ## Run
 
 ```
-python meetdown.py
+python md.py
 #or
-chmod +x /path/to/meetdown.py
-./path/to/meetdown.py
+chmod +x /path/to/md.py
+./path/to/md.py
 ```
