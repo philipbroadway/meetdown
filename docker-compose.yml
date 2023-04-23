@@ -1,0 +1,8 @@
+version: '3.9'
+
+services:
+  md_app:
+    build: .
+    container_name: md_app
+    tty: true
+    stdin_open: true

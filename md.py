@@ -1,160 +1,166 @@
-#!/usr/bin/env python3
-
-ASCII="""
-███    ███ ███████ ███████ ████████ ██████   ██████  ██     ██ ███    ██ 
-████  ████ ██      ██         ██    ██   ██ ██    ██ ██     ██ ████   ██ 
-██ ████ ██ █████   █████      ██    ██   ██ ██    ██ ██  █  ██ ██ ██  ██ 
-██  ██  ██ ██      ██         ██    ██   ██ ██    ██ ██ ███ ██ ██  ██ ██ 
-██      ██ ███████ ███████    ██    ██████   ██████   ███ ███  ██   ████ 
+desc = """
+┌┬┐┌─┐┌─┐┌┬┐┌┬┐┌─┐┬ ┬┌┐┌
+│││├┤ ├┤  │  │││ │││││││
+┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
 """
-PROMPT = """
-Options:
-
-1 - Add Todo
-2 - Add Completed
-3 - Add Blocker
-4 - Add User
-5 - Add Tag
-6 - Change save location
-7 - Save to file
-8 - Exit
-"""
-
-TABLE_HEADER = """
-| `Task ID` | `Description` | `Completed` |
-|---|---|---|"""
-
-TODO="☑️"
-COMPLETED="✅"
-
-import datetime
 import os
-from pathlib import Path
-from dotenv import load_dotenv
+import argparse
+import datetime
 
-load_dotenv()
+# Global
+users_data = {}
 
-MEETDOWN_FOLDER = os.getenv("MEETDOWN_FOLDER") if os.getenv("MEETDOWN_FOLDER") else ""# Add a default here if not using .env
-MEETDOWN_TICKET_BASE = os.getenv("MEETDOWN_TICKET_BASE") if os.getenv("MEETDOWN_TICKET_BASE") else ""# Add a default here if not using .env
-MEETDOWN_USERS = os.getenv("MEETDOWN_USERS").split('/') if os.getenv("MEETDOWN_USERS") else [os.environ.get('USER', os.environ.get('USERNAME'))]
-MEETDOWN_TAGS = os.getenv("MEETDOWN_TAGS").split('/') if os.getenv("MEETDOWN_TAGS") else ["r&d", "standup"]
-user_data = {}
+now = datetime.datetime.now()
+now.strftime("%m-%d-%y")
 
+default_folder = ""
+default_location = f"standup-{now}.md"  # set here or use --out flag
+default_users = []  # Default list of users or use  --users flag separated by commas
 
-def add_todo(username, task_id, description):
-    if username not in user_data:
-        user_data[username] = []
-    user_data[username].append({"id": task_id, "description": description, "completed": False})
-
-def add_completed(username, task_id, description):
-    if username not in user_data:
-        user_data[username] = []
-    user_data[username].append({"id": task_id, "description": description, "completed": True})
-
-def add_blocker(username, task_id, description):
-    if username not in user_data:
-        user_data[username] = []
-    user_data[username].append({"id": task_id, "description": description, "completed": False, "blocker": True})
-
-def write_markdown(filename, location):
+def parse_arguments():
     
-    Path(location).mkdir(parents=True, exist_ok=True)
-    markdown_content = generate_markdown()
+    parser = argparse.ArgumentParser(description='Process command-line arguments.')
 
-    with open(f"{filename}", "w") as file:
-        file.write(markdown_content)
-    return f"Markdown file '{filename}' has been written to the location '{location}'."
+    parser.add_argument('--title', type=str, default=f"standup-{now}", help='Title (default: meetdown-date.md)')
 
-def generate_markdown():
-    date_str = datetime.datetime.now().strftime("%m-%d-%y")
-    Path(MEETDOWN_FOLDER).mkdir(parents=True, exist_ok=True)
+    parser.add_argument('--users', type=str, default='philipbroadway', help='List of usernames separated by commas (default: empty list)')
 
-    markdown_content = f"# {date_str}"
-    markdown_content += f"\n#{' #'.join(MEETDOWN_TAGS)} #{date_str}\n___\n"
-    for username, tasks in user_data.items():
-        markdown_content += f"\n## {username}\n\n"
-        markdown_content += f"{TABLE_HEADER}\n"
-        for task in tasks:
-            completed_checkbox = COMPLETED if task["completed"] else TODO
-            blocker_note = " (Blocker)" if task.get("blocker", False) else ""
-            if not task['id']:
-              markdown_content += f"| `-` | {task['description']}{blocker_note} | {completed_checkbox} |\n"
-            else:
-                markdown_content += f"| [{task['id']}]({MEETDOWN_TICKET_BASE}{task['id']}) | {task['description']}{blocker_note} | {completed_checkbox} |\n"
-            
-        markdown_content += "\n\n"
+    parser.add_argument('--out', type=str, default="", help='Save directory path (default: empty string)')
 
-    return markdown_content
+    args = parser.parse_args()
 
-def main(usernames):
-    global MEETDOWN_FOLDER
+    if args.users:
+        args.users = args.users.split(',')
+
+    return args
+
+def clear_screen():
+    if os.name == 'posix':
+        os.system('clear')
+    elif os.name == 'nt':
+        os.system('cls')
+
+def get_jira_url(ticket):
+    return f"https://frontdeskhq.atlassian.net/jira/software/c/projects/FD/boards/7/backlog?view=detail&selectedIssue={ticket}"
+
+def add_user():
+    new_user = input("Enter name of new user: ")
+    users_data[new_user] = {"[ ]": [], "✅": [], "❌": []}
+    default_users.append(new_user)
+    print(f"User '{new_user}' added.")
+
+def remove_user():
+    user_index = select_user()
+    if user_index is None:
+        return
+    selected_user = default_users[user_index]
+    default_users.pop(user_index)
+    users_data.pop(selected_user)
+    print(f"User '{selected_user}' removed.")
+
+def remove_item(category):
+    user_index = select_user()
+    if user_index is None:
+        return
+    selected_user = default_users[user_index]
+    items = users_data[selected_user][category]
+    if not items:
+        print(f"No {category} items to remove.")
+        return
+    print(f"{selected_user}'s {category} items:")
+    for i, item in enumerate(items, start=1):
+        print(f"{i}. {item['description']}")
+    item_index = int(input(f"Enter the number of the {category} item to remove: ")) - 1
+    items.pop(item_index)
+    print(f"{category.capitalize()} item removed.")
+
+def add_item(category):
+    user_index = select_user()
+    if user_index is None:
+      user_index = 1
+    selected_user = default_users[user_index]
+    
+    is_jira = input("Is this a Jira ticket? (y/n, default: n): ").lower() == "y"
+    jira_ticket = ""
+    if is_jira:
+        jira_ticket = input("Enter Jira ticket name: ")
+    description = input(f"Enter {category} description: ")
+    users_data[selected_user][category].append({
+        "jira_ticket": jira_ticket,
+        "description": description
+    })
+
+def select_user():
+    for i, user in enumerate(default_users, start=1):
+        print(f"{i}. {user}")
+    user_index = int(input("Select a user by entering the number: ")) - 1
+    if user_index < 0 or user_index >= len(default_users):
+        print("Invalid selection.")
+        return None
+    return user_index
+
+def save_to_file():
+    save_location = input(f"Enter save location (default: meetdown-{now}.md): ") or f"meetdown-{now}.md"
+    with open(f"{default_folder}{save_location}", "w") as file:
+        for user, data in users_data.items():
+            file.write(f"## {user}\n\n")
+            file.write("| Category | Jira Ticket | Description |\n")
+            file.write("|----------|-------------|-------------|\n")
+            for category, items in data.items():
+                for item in items:
+                    jira_ticket = get_jira_url(item["jira_ticket"]) if item["jira_ticket"] else ""
+                    file.write(f"| {category.capitalize()} | {jira_ticket} | {item['description']} |\n")
+    print(f"Standup meeting notes saved to:\n{default_folder}{save_location}\n")
+
+def standup_meeting(args):
     while True:
         os.system('clear')
-        banner = f"{ASCII}"
-        if os.getenv("MEETDOWN_DEBUG"):
-          banner += f"$MEETDOWN_FOLDER: {MEETDOWN_FOLDER}\n"
-          banner += f"$MEETDOWN_TAGS: {os.getenv('MEETDOWN_TAGS').split('/')}\n"
-          banner += f"$MEETDOWN_USERS: {','.join(MEETDOWN_USERS)}\n"
-        banner += f"{generate_markdown()}\n"
-        banner += f"{PROMPT}\n"
-        print(banner)
-
-        action = input(">")
-        verb = ACTIONS[int(action)-1]
-        if action == "1" or action == "2" or action == "3":
-            
-            selected_user_index = 0
-            username = MEETDOWN_USERS[0]
-
-            if len(MEETDOWN_USERS) > 1:
-              print(f"{verb} for?:")
-              for i, username in enumerate(MEETDOWN_USERS, 1):
-                print(f"{i}. {username}")
-              selected_user_index = int(input(">"))
-              username = MEETDOWN_USERS[selected_user_index - 1]
-
-            
-            task_id = input("Task ID? (blank if not jira): ")
-            description = input("Enter the task description: ")
-            
-            if action == "1":
-                add_todo(username, task_id, description)
-            elif action == "2":
-                add_completed(username, task_id, description)
-            elif action == "3":
-                add_blocker(username, task_id, description)
-        elif action == "4":
-            username = input("Enter the username: ")
-            if username not in MEETDOWN_USERS:
-              MEETDOWN_USERS.append(username)
-            else:
-                MEETDOWN_USERS.append(f"{username}-{len(MEETDOWN_USERS)})")
-        
-        elif action == "5":
-            tag = input("Enter the tag: ")
-            if tag not in MEETDOWN_TAGS:
-              MEETDOWN_TAGS.append(tag)
-            else:
-                MEETDOWN_TAGS.append(f"{tag}-{len(MEETDOWN_TAGS)})")
-        
-        elif action == "6":
-            new_location = input("Enter the folder path: ")
-            MEETDOWN_FOLDER = new_location
-            
-        elif action == "7":
-            date_str = datetime.datetime.now().strftime("%m-%d-%y-%H%M%s")
-            filename = input(f"Enter the filename (default is '{date_str}.md'): ")
-            if filename == "":
-                filename = f"{date_str}.md"
-            else:
-                filename = f"{filename}.md"
-
-            write_markdown(filename, MEETDOWN_FOLDER)
-
-        elif action == "8":
-            os.system('clear')
+        print(f"{desc}\n@{default_location}\n")
+        # Preview
+        print(f"# {now}\n")
+        for user, data in users_data.items():
+            print(f"\n## {user}\n")
+            print("| Status | Jira Ticket | Description |")
+            print("|----------|-------------|-------------|")
+            for category, items in data.items():
+                for item in items:
+                    jira_ticket = get_jira_url(item["jira_ticket"]) if item["jira_ticket"] else ""
+                    print(f"| {category.capitalize()} | {jira_ticket} | {item['description']} |")
+        # Get user input for the selected option
+        print("\nOptions:")
+        print("1. Add User 👤\t\t8. Remove User 👤")
+        print("2. Add in-progress\t5. Remove in-progress")
+        print("3. Complete ✅\t\t6. Remove Completed ✅")
+        print("4. Add Blocker ❌\t7. Remove Blocker ❌")
+        print("\t\t\t9. Exit and save\n")
+        selected_option = int(input("Select an option by entering the number: "))
+        if selected_option == 1:
+            add_user()
+        elif selected_option == 2:
+            add_item("[ ]")
+        elif selected_option == 3:
+            add_item("✅")
+        elif selected_option == 4:
+            add_item("❌")
+        elif selected_option == 5:
+            remove_item("[ ]")
+        elif selected_option == 6:
+            remove_item("✅")
+        elif selected_option == 7:
+            remove_item("❌")
+        elif selected_option == 8:
+            remove_user()
+        elif selected_option == 9:
+            save_to_file()
             break
         else:
-            print("Invalid action. Please choose a valid action number.")
+            print("Invalid option. Please try again.")
+            
+args = parse_arguments()
+users_data = {user: {"[ ]": [], "✅": [], "❌": []} for user in args.users}
+default_users = args.users
+default_location = args.title 
+default_folder = args.out
+clear_screen()
 
-main(MEETDOWN_USERS)
+standup_meeting(args)

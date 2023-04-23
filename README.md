@@ -1,9 +1,7 @@
 ```
-███    ███ ███████ ███████ ████████ ██████   ██████  ██     ██ ███    ██
-████  ████ ██      ██         ██    ██   ██ ██    ██ ██     ██ ████   ██
-██ ████ ██ █████   █████      ██    ██   ██ ██    ██ ██  █  ██ ██ ██  ██
-██  ██  ██ ██      ██         ██    ██   ██ ██    ██ ██ ███ ██ ██  ██ ██
-██      ██ ███████ ███████    ██    ██████   ██████   ███ ███  ██   ████
+┌┬┐┌─┐┌─┐┌┬┐┌┬┐┌─┐┬ ┬┌┐┌
+│││├┤ ├┤  │  │││ │││││││
+┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
 ```
 
 ## Prerequisites
@@ -12,26 +10,23 @@
 
 ## Getting Started
 
-```
-pip install -r requirements.txt
-
-cp .env-example .env
-
-source .env
-```
-
-Add aliases to shell profile to load .env in pwd
-```
-alias source_env='if [ -f .env ]; then source .env; else echo ".env file not found"; fi'
-alias md="source_env && python /path/to/md.py"
-```
-
-
-## Run
-
-```
+```bash
 python md.py
 #or
 chmod +x /path/to/md.py
 ./path/to/md.py
+```
+
+## Docker
+
+Quickstart:
+```bash
+docker build -t md . && docker run -it md
+
+```
+
+To open the folder where the markdown documents are kept, you can use the following command:
+
+```bash
+docker-compose exec md /bin/bash -c "cd /meetdown/ && ls -l"
 ```
