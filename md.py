@@ -41,7 +41,7 @@ def clear_screen():
         os.system('cls')
 
 def get_jira_url(ticket):
-    return f"https://frontdeskhq.atlassian.net/jira/software/c/projects/FD/boards/7/backlog?view=detail&selectedIssue={ticket}"
+    return f"[{ticket}](https://frontdeskhq.atlassian.net/jira/software/c/projects/FD/boards/7/backlog?view=detail&selectedIssue={ticket})"
 
 def add_user():
     new_user = input("Enter name of new user: ")
@@ -106,10 +106,15 @@ def save_to_file():
             file.write(f"## {user}\n\n")
             file.write("| Category | Jira Ticket | Description |\n")
             file.write("|----------|-------------|-------------|\n")
+            no_items = True
             for category, items in data.items():
-                for item in items:
-                    jira_ticket = get_jira_url(item["jira_ticket"]) if item["jira_ticket"] else ""
-                    file.write(f"| {category.capitalize()} | {jira_ticket} | {item['description']} |\n")
+                  for item in items:
+                      no_items = False
+                      jira_ticket = get_jira_url(item["jira_ticket"]) if item["jira_ticket"] else ""
+                      file.write(f"| {category.capitalize()} | {jira_ticket} | {item['description']} |\n")
+            if no_items:
+              file.write("| - | - | - |\n")
+              
     print(f"Standup meeting notes saved to:\n{default_folder}{save_location}\n")
 
 def standup_meeting(args):
@@ -122,10 +127,15 @@ def standup_meeting(args):
             print(f"\n## {user}\n")
             print("| Status | Jira Ticket | Description |")
             print("|----------|-------------|-------------|")
+            no_items = True
             for category, items in data.items():
-                for item in items:
-                    jira_ticket = get_jira_url(item["jira_ticket"]) if item["jira_ticket"] else ""
-                    print(f"| {category.capitalize()} | {jira_ticket} | {item['description']} |")
+              for item in items:
+                  no_items = False
+                  jira_ticket = get_jira_url(item["jira_ticket"]) if item["jira_ticket"] else ""
+                  print(f"| {category.capitalize()} | {jira_ticket} | {item['description']} |")
+            if no_items:
+              print("| - | - | - |")
+              
         # Get user input for the selected option
         print("\nOptions:")
         print("1. Add User 👤\t\t8. Remove User 👤")
