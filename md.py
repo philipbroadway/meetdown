@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 md_data = {}
 
 now = datetime.datetime.now()
-now.strftime("%m-%d-%y")
+now.strftime("%m-%d-%Y-")
 
 # Default config
 config = {
