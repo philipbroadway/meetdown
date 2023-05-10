@@ -20,6 +20,7 @@ now.strftime("%m-%d-%y")
 
 # Default config
 config = {
+    "debug": 0,
     "folder": "",
     "location": f"meetdown-{now}.md",
     "tmp": "meetdown-tmp.md",
@@ -51,6 +52,8 @@ def generate_options():
     other_opts = []
     entity_opts = []
 
+    entity_id = config['id']
+
     if config['ctx-itm-lbl-enabled']:
         for i, ctx in enumerate(config['ctx'], start=1):
             for symbol, description in ctx.items():
@@ -59,11 +62,12 @@ def generate_options():
             for symbol, description in ctx.items():
                 remove_opts.append(f"{i}. Remove {description}")
         
-        entity_opts.append(f"{i+1}. Add entity")
-        entity_opts.append(f"{i+2}. Remove entity")
+        entity_opts.append(f"{i+1}. Add {entity_id}")
+        entity_opts.append(f"{i+2}. Remove {entity_id}")
         other_opts.append(f"{i+3}. Save & Quit")
         other_opts.append(f"{i+4}. Load")
-        other_opts.append(f"{i+5}. Upload")
+        if config['debug']:
+          other_opts.append(f"{i+5}. Upload")
     else:
         for i, ctx in enumerate(config['ctx'], start=1):
             for symbol, description in ctx.items():
@@ -72,11 +76,12 @@ def generate_options():
             for symbol, description in ctx.items():
                 remove_opts.append(f"{i}. Remove {symbol}")
         
-        entity_opts.append(f"{i+1}. Add {config['id']}")
-        entity_opts.append(f"{i+2}. Remove {config['id']}")
+        entity_opts.append(f"{i+1}. Add {entity_id}")
+        entity_opts.append(f"{i+2}. Remove {entity_id}")
         other_opts.append(f"{i+3}. Save & Quit")
         other_opts.append(f"{i+4}. Load")
-        other_opts.append(f"{i+5}. Upload")
+        if config['debug']:
+          other_opts.append(f"{i+5}. Upload")
         
     return "\n".join(["\t\t".join(add_opts), "\t\t".join(remove_opts),"\t\t".join(entity_opts), "\t\t".join(other_opts)])
 
