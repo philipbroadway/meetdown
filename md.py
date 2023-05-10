@@ -62,48 +62,30 @@ default_root_elements = []  # Default list of users or use  --users flag separat
 # Name of the temporary file
 tmp_filename = config['tmp']
 
+def itemTypes(config):
+    dynamic_object_keys = []
+
+    for obj in config['ctx']:
+        for key in obj:
+            dynamic_object_keys.append(key)
+
+    return dynamic_object_keys
+
 def generate_options():
-    add_opts = []
-    remove_opts = []
-    other_opts = []
-    toggle_opts = []
-    entity_opts = []
+    opts = []
 
     entity_id = config['id']
-
-    if config['ctx-itm-lbl-enabled']:
-        for i, ctx in enumerate(config['ctx'], start=1):
-            for symbol, description in ctx.items():
-                add_opts.append(f"{i}. Add {description}")
-        for i, ctx in enumerate(config['ctx'], start=i+1):
-            for symbol, description in ctx.items():
-                remove_opts.append(f"{i}. Remove {description}")
+    i = 0
+    opts.append(f"{i+1}. Add")
+    opts.append(f"{i+2}. Remove")
+    opts.append(f"{i+3}. Toggle")
+    opts.append(f"{i+4}. Load")
+    opts.append(f"{i+5}. Save & Quit")
+    
+    if config['debug']:
+      opts.append(f"{i+6}. Upload")
         
-        entity_opts.append(f"{i+1}. Add {entity_id}")
-        entity_opts.append(f"{i+2}. Remove {entity_id}")
-
-        toggle_opts = f"{i+6}. Toggle"
-        other_opts.append(f"{i+3}. Save & Quit")
-        other_opts.append(f"{i+4}. Load")
-        if config['debug']:
-          other_opts.append(f"{i+5}. Upload")
-    else:
-        for i, ctx in enumerate(config['ctx'], start=1):
-            for symbol, description in ctx.items():
-                add_opts.append(f"{i}. Add {symbol}")
-        for i, ctx in enumerate(config['ctx'], start=i+1):
-            for symbol, description in ctx.items():
-                remove_opts.append(f"{i}. Remove {symbol}")
-        
-        entity_opts.append(f"{i+1}. Add {entity_id}")
-        entity_opts.append(f"{i+2}. Remove {entity_id}")
-        toggle_opts = f"{i+6}. Toggle"
-        other_opts.append(f"{i+3}. Save & Quit")
-        other_opts.append(f"{i+4}. Load")
-        if config['debug']:
-          other_opts.append(f"{i+5}. Upload")
-        
-    return "\n".join(["\t\t".join(add_opts), "\t\t".join(remove_opts),"\t\t".join(entity_opts), "\t\t".join([toggle_opts]), "\t\t".join(other_opts)])
+    return "\n".join(["\n".join(opts)])
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Process command-line arguments.')
@@ -167,6 +149,124 @@ def toggle():
     md_data[entity][from_category].remove(item)
     md_data[entity][to_category].append(item)
     print(f"Item toggled from {from_category} to {to_category}.")
+
+def addable_items():
+    # First, create a flat list of all items
+    all_items = []
+    for entity, data in md_data.items():
+        for category, items in data.items():
+            for item in items:
+                all_items.append((entity, category, item))
+
+def addable_items():
+    # First, create a flat list of all items
+    all_items = []
+    for entity, data in md_data.items():
+        for category, items in data.items():
+            for item in items:
+                all_items.append((entity, category, item))
+
+def add():
+    # Get the list of all types of items
+    item_types = itemTypes(config)
+    item_count = 0
+    # Print all item types and let the user select one
+    items = []
+    for i, item_type in enumerate(item_types, start=1):
+        for n, entity in enumerate(default_root_elements, start=1):
+          item_count += 1
+          print(f"{item_count}. Add {item_type} for {entity}")
+          items.append({"index": i, "entity": entity, "item_type": item_type})
+    item_count += 1
+    print(f"{item_count}. Add {config['id']}")
+    items.append({"index": i+1, "entity": config['id'], "item_type": config['id']})
+    
+    item_type_index = input("Enter the number of the item type to add, or press Enter to return to main menu: ")
+    if item_type_index == '':  # if input is empty, return to main menu
+        return
+
+    item = items[int(item_type_index) - 1]
+    
+    selected_entity = item['entity']
+    selected_item_type = item['item_type']
+    selected_item_index = item['index']
+
+    if selected_entity == config['id']:
+      add_root()
+
+    else:
+      # Ask for the details of the new item
+      is_tracker = input(f"Is this a {tracker().capitalize()} ticket? (y/n): ").lower() 
+      if is_tracker == 'y':
+          tracker_ticket = input(f"Enter {tracker().capitalize()} ID (ex: FD-12234): ")
+      else:
+          tracker_ticket = ''
+      description = input(f"Enter {selected_item_type} description: ")
+      if description == '':  # if input is empty, return to main menu
+          return
+
+      # Add the new item to the selected category for the selected entity
+      md_data[selected_entity][selected_item_type].append({
+          "tracker_ticket": tracker_ticket,
+          "description": description
+      })
+
+      print(f"New {selected_item_type} item added for {selected_entity}.")
+
+def remove():
+    # Get the list of all types of items
+    item_types = itemTypes(config)
+    item_count = 0
+    # Print all item types and let the user select one
+    items = []
+    for i, item_type in enumerate(item_types, start=1):
+        for n, entity in enumerate(default_root_elements, start=1):
+          item_count += 1
+          print(f"{item_count}. Remove {item_type} for {entity}")
+          items.append({"index": i, "entity": entity, "item_type": item_type})
+    item_count += 1
+    print(f"{item_count}. Remove {config['id']}")
+    items.append({"index": i+1, "entity": config['id'], "item_type": config['id']})
+    
+    item_type_index = input("Enter the number of the action to perform: ")
+    if item_type_index == '':  # if input is empty, return to main menu
+        return
+
+    item = items[int(item_type_index) - 1]
+    
+    selected_entity = item['entity']
+    selected_item_type = item['item_type']
+    selected_item_index = item['index']
+
+    if selected_entity == config['id']:
+      entity_index = select_root()
+      if entity_index is None:
+          return
+      selected_entity = default_root_elements[entity_index]
+      default_root_elements.pop(entity_index)
+      md_data.pop(selected_entity)
+      print(f"➖  '{selected_entity}'")
+      remove_root()
+
+    else:
+      # Ask for the details of the new item
+      is_tracker = input(f"Is this a {tracker().capitalize()} ticket? (y/n): ").lower() 
+      if is_tracker == 'y':
+          tracker_ticket = input(f"Enter {tracker().capitalize()} ID (ex: FD-12234): ")
+      else:
+          tracker_ticket = ''
+      description = input(f"Enter {selected_item_type} description: ")
+      if description == '':  # if input is empty, return to main menu
+          return
+
+      # Add the new item to the selected category for the selected entity
+      md_data[selected_entity][selected_item_type].append({
+          "tracker_ticket": tracker_ticket,
+          "description": description
+      })
+
+      print(f"New {selected_item_type} item added for {selected_entity}.")
+
 
 def add_root():
     new_root = input("Enter name of new entity: ")
@@ -389,40 +489,31 @@ def meetdown(args):
             continue
         
         ctx_length = len(config['ctx'])
-        if 1 <= selected_option <= ctx_length:
+        if selected_option == 1:
             # Add ctx item
-            ctx_idx = selected_option - 1
-            category = list(config['ctx'][ctx_idx].keys())[0]
-            add_item(category)
-        elif ctx_length+1 <= selected_option <= 2*ctx_length:
+            add()
+        elif selected_option == 2:
             # Remove ctx item
-            ctx_idx = selected_option - ctx_length - 1
-            category = list(config['ctx'][ctx_idx].keys())[0]
-            remove_item(category)
-        elif selected_option == 2*ctx_length + 1:
-            # Add entity
-            add_root()
-        elif selected_option == 2*ctx_length + 2:
-            # Remove entity
-            remove_root()
-        elif selected_option == 2*ctx_length + 3:
-             # Save ctx to markdown
-            save_to_file()
-            break
-        elif selected_option == 2*ctx_length + 4:
-             # Load ctx from markdown
+            remove()
+        elif selected_option == 3:
+            # Toggle item
+            toggle()
+        elif selected_option == 4:
+            # Load ctx from markdown
             file_path = input("Enter the path of the Markdown file to load: ")
             md_data, default_records = load_from_markdown(file_path)
-        elif selected_option == 2*ctx_length + 5:
-             # Save ctx & upload to gist
+        elif selected_option == 5:
+            # Save ctx to markdown
+            save_to_file()
+            break
+        elif selected_option == 6:
+            # Save ctx & upload to gist
             gist_desc = input("Enter a description for your `gist`: ")
             save_to_markdown(config['tmp'])
             upload_to_gist(config['tmp'], gist_desc)
-        elif selected_option == 2*ctx_length + 6:
-            # Toggle item
-            toggle()
         else:
             print(f"`${selected_option}` is an invalid option. \nEnter any number 1-{2*ctx_length+5} and hit return or hit return again to stash & exit")
+
 
 args = parse_arguments()
 
