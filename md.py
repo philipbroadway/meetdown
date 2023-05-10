@@ -6,6 +6,7 @@ desc = """
 import os
 import argparse
 import datetime
+import pickle
 
 # Global
 users_data = {}
@@ -17,14 +18,25 @@ default_folder = ""
 default_location = f"standup-{now}.md"  # set here or use --out flag
 default_users = []  # Default list of users or use  --users flag separated by commas
 
+# Name of the temporary file
+tmp_filename = "tmp.pkl"
+
+# Function to save state to a temporary file
+def save_state():
+    with open(tmp_filename, "wb") as tmp_file:
+        pickle.dump((users_data, default_users, default_location, default_folder), tmp_file)
+
+# Function to load state from a temporary file
+def load_state():
+    global users_data, default_users, default_location, default_folder
+    with open(tmp_filename, "rb") as tmp_file:
+        users_data, default_users, default_location, default_folder = pickle.load(tmp_file)
+
 def parse_arguments():
     
     parser = argparse.ArgumentParser(description='Process command-line arguments.')
-
     parser.add_argument('--title', type=str, default=f"standup-{now}", help='Title (default: meetdown-date.md)')
-
     parser.add_argument('--users', type=str, default='philipbroadway', help='List of usernames separated by commas (default: empty list)')
-
     parser.add_argument('--out', type=str, default="", help='Save directory path (default: empty string)')
 
     args = parser.parse_args()
@@ -70,21 +82,29 @@ def remove_item(category):
     print(f"{selected_user}'s {category} items:")
     for i, item in enumerate(items, start=1):
         print(f"{i}. {item['description']}")
-    item_index = int(input(f"Enter the number of the {category} item to remove: ")) - 1
+    item_index = input(f"Enter the number of the {category} item to remove, or press Enter to return to main menu: ")
+    if item_index == '':  # if user input is empty, return to main menu
+        return
+    item_index = int(item_index) - 1
     items.pop(item_index)
     print(f"{category.capitalize()} item removed.")
 
 def add_item(category):
     user_index = select_user()
     if user_index is None:
-      user_index = 1
+        return
     selected_user = default_users[user_index]
     
-    is_jira = input("Is this a Jira ticket? (y/n, default: n): ").lower() == "y"
+    is_jira = input("Is this a Jira ticket? (y/n, default: n): ").lower() 
+    if is_jira == '':  # if user input is empty, return to main menu
+        return
+    is_jira = is_jira == 'y'
     jira_ticket = ""
     if is_jira:
         jira_ticket = input("Enter Jira ticket name: ")
     description = input(f"Enter {category} description: ")
+    if description == '':  # if user input is empty, return to main menu
+        return
     users_data[selected_user][category].append({
         "jira_ticket": jira_ticket,
         "description": description
@@ -93,7 +113,10 @@ def add_item(category):
 def select_user():
     for i, user in enumerate(default_users, start=1):
         print(f"{i}. {user}")
-    user_index = int(input("Select a user by entering the number: ")) - 1
+    user_index = input("Select a user by entering the number, or press Enter to return to main menu: ")
+    if user_index == '':  # if user input is empty, return to main menu
+        return None
+    user_index = int(user_index) - 1
     if user_index < 0 or user_index >= len(default_users):
         print("Invalid selection.")
         return None
@@ -135,7 +158,7 @@ def standup_meeting(args):
                   print(f"| {category.capitalize()} | {jira_ticket} | {item['description']} |")
             if no_items:
               print("| - | - | - |")
-              
+
         # Get user input for the selected option
         print("\nOptions:")
         print("1. Add User 👤\t\t8. Remove User 👤")
@@ -143,7 +166,16 @@ def standup_meeting(args):
         print("3. Complete ✅\t\t6. Remove Completed ✅")
         print("4. Add Blocker ❌\t7. Remove Blocker ❌")
         print("\t\t\t9. Exit and save\n")
-        selected_option = int(input("Select an option by entering the number: "))
+        print("\nOr press Enter without entering anything to save a tmp to reload later.\n")
+        selected_option = input("Select an option by entering the number: ")
+        if not selected_option:  # if user input is empty, exit and save
+            save_state()
+            break
+        try:
+            selected_option = int(selected_option)
+        except ValueError:  # if user input can't be converted to an integer, print an error message
+            print("Invalid option. Please try again.")
+            continue
         if selected_option == 1:
             add_user()
         elif selected_option == 2:
@@ -165,12 +197,32 @@ def standup_meeting(args):
             break
         else:
             print("Invalid option. Please try again.")
-            
+
+
 args = parse_arguments()
-users_data = {user: {"[ ]": [], "✅": [], "❌": []} for user in args.users}
-default_users = args.users
-default_location = args.title 
-default_folder = args.out
+
+tmp_file_found = False
+tmp_file_action = 0
+if os.path.exists(tmp_filename):
+    print(f"Unsaved file {tmp_filename} found.")
+    print("1. Reload from temporary file")
+    print("2. Delete temporary file")
+    tmp_file_action = int(input("Select an option by entering the number: "))
+    tmp_file_found = True
+    if tmp_file_action == 2:
+        os.remove(tmp_filename)
+
+if tmp_file_found and tmp_file_action == 1:
+    load_state()
+else:
+    users_data = {user: {"[ ]": [], "✅": [], "❌": []} for user in args.users}
+    default_users = args.users
+    default_location = args.title
+    default_folder = args.out
+
 clear_screen()
 
 standup_meeting(args)
+
+# Save state to temporary file before exiting
+# save_state()
