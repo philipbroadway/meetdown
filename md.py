@@ -1,4 +1,4 @@
-desc = """
+name = """
 ┌┬┐┌─┐┌─┐┌┬┐┌┬┐┌─┐┬ ┬┌┐┌
 │││├┤ ├┤  │  │││ │││││││
 ┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
@@ -12,6 +12,7 @@ import argparse
 import datetime
 import markdown
 from bs4 import BeautifulSoup
+
 # Global
 md_data = {}
 
@@ -20,6 +21,21 @@ now.strftime("%m-%d-%Y-")
 
 # Default config
 config = {
+    # 'debug': A debug flag (0 = off, 1 = on).
+    # 'folder': The directory where the markdown file will be saved.
+    # 'location': The name of the markdown file.
+    # 'tmp': The name of the temporary markdown file.
+    # 'id': An emoji or string to represent an entity (user).
+    # 'desc': A description of the 'id'.
+    # 'tracker': A dictionary with 'id' and 'url' for linking to a ticket tracking system (like Jira).
+    # 'ctx': A list of dictionaries representing different categories or statuses of work items. 
+    #        Each dictionary should contain a unique key-value pair. 
+    #        The key can be any string or emoji and represents the status symbol. 
+    #        The value is a description of the status.
+    #        **Dynamically controlls list of items that can be added/removed/swapped/toggled.**
+    #        For example, ctx[{"📝":  "📝 notes"}..rest] Would create a status symbol of 📝 and a description of 📝 notes & list options to add, remove, or toggle the status.
+    # 'ctx-itm-lbl-enabled': A flag to control whether the labels (values from 'ctx' dictionaries) are shown (1 = enabled, 0 = disabled).
+
     "debug": 0,
     "folder": "",
     "location": f"meetdown-{now}.md",
@@ -33,11 +49,11 @@ config = {
     "ctx": [
         {"[ ]":  "[ ] in-progress"},
         {"✅":  "✅ completed"},
-        {"❌":  "❌ blocker"},
-        {"💩":  "💩 bs"}
+        {"❌":  "❌ blocker"}
     ],
-    "ctx-itm-lbl-enabled": 0, # 0 = disabled, 1 = enabled shows lbls
+    "ctx-itm-lbl-enabled": 0
 }
+
 default_username = getpass.getuser()
 default_folder = config['folder']
 default_location = config['location']
@@ -152,9 +168,6 @@ def toggle():
     md_data[entity][to_category].append(item)
     print(f"Item toggled from {from_category} to {to_category}.")
 
-
-
-
 def add_root():
     new_root = input("Enter name of new entity: ")
     # Initialize an empty list for each category in config's context
@@ -211,7 +224,7 @@ def remove_item(category):
     selected_entity = default_root_elements[entity_index]
     items = md_data[selected_entity][category]
     if not items:
-        print(f"No {category} items to remove.")
+        print(f"⛔ No {category} items to remove.")
         return
     print(f"{selected_entity}'s {category} items:")
     for i, item in enumerate(items, start=1):
@@ -245,7 +258,7 @@ def load_from_markdown(file_path):
     global md_data, default_root_elements
 
     if not os.path.isfile(file_path.strip()):
-      print(f"Error: No such file or directory: '{file_path.strip()}'")
+      print(f"⛔ Error: No such file or directory: '{file_path.strip()}'")
       return
 
     with open(file_path, 'r') as file:
@@ -329,7 +342,7 @@ def upload_to_gist(filename, description=""):
     if response.status_code == 201:
         print(f"Gist created successfully! URL: {response.json()['html_url']}")
     else:
-        print(f"Error while creating gist, status code: {response.status_code}")
+        print(f"⛔ Error while creating gist, status code: {response.status_code}")
 
 def ensure_default_ctx_items_exist_in_md_data():
   global md_data, default_records
@@ -344,7 +357,7 @@ def meetdown(args):
     while True:
         ensure_default_ctx_items_exist_in_md_data()
         os.system('clear')
-        print(f"{desc}")
+        print(f"{name}")
         # Preview
         if config["ctx-itm-lbl-enabled"]:
             print(f"\n@{default_location}\n")
@@ -410,7 +423,6 @@ def meetdown(args):
             toggle()
         else:
             print(f"`${selected_option}` is an invalid option. \nEnter any number 1-{2*ctx_length+5} and hit return or hit return again to stash & exit")
-
 
 args = parse_arguments()
 
