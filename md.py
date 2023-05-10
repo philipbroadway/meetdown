@@ -50,6 +50,7 @@ def generate_options():
     add_opts = []
     remove_opts = []
     other_opts = []
+    toggle_opts = []
     entity_opts = []
 
     entity_id = config['id']
@@ -64,6 +65,8 @@ def generate_options():
         
         entity_opts.append(f"{i+1}. Add {entity_id}")
         entity_opts.append(f"{i+2}. Remove {entity_id}")
+
+        toggle_opts = f"{i+6}. Toggle"
         other_opts.append(f"{i+3}. Save & Quit")
         other_opts.append(f"{i+4}. Load")
         if config['debug']:
@@ -78,12 +81,13 @@ def generate_options():
         
         entity_opts.append(f"{i+1}. Add {entity_id}")
         entity_opts.append(f"{i+2}. Remove {entity_id}")
+        toggle_opts = f"{i+6}. Toggle"
         other_opts.append(f"{i+3}. Save & Quit")
         other_opts.append(f"{i+4}. Load")
         if config['debug']:
           other_opts.append(f"{i+5}. Upload")
         
-    return "\n".join(["\t\t".join(add_opts), "\t\t".join(remove_opts),"\t\t".join(entity_opts), "\t\t".join(other_opts)])
+    return "\n".join(["\t\t".join(add_opts), "\t\t".join(remove_opts),"\t\t".join(entity_opts), "\t\t".join([toggle_opts]), "\t\t".join(other_opts)])
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Process command-line arguments.')
@@ -104,8 +108,52 @@ def clear_screen():
     elif os.name == 'nt':
         os.system('cls')
 
+def tracker():
+    return config['tracker']['id']
+
 def toTrackerMarkdownURL(ticket):
     return f"[{ticket}]({config['tracker']['url']}{ticket})"
+
+def toggle():
+    # First, create a flat list of all items
+    all_items = []
+    for entity, data in md_data.items():
+        for category, items in data.items():
+            for item in items:
+                all_items.append((entity, category, item))
+
+    # If there are no items, return
+    if not all_items:
+        print("No items to toggle.")
+        return
+
+    # Now, print all items and let the user select one
+    for i, (entity, category, item) in enumerate(all_items, start=1):
+        print(f"{i}. {entity} - {category} - {item['description']}")
+    item_index = input("Enter the number of the item to toggle, or press Enter to return to main menu: ")
+    if item_index == '':  # if input is empty, return to main menu
+        return
+    item_index = int(item_index) - 1
+
+    # Get the selected item and its details
+    entity, from_category, item = all_items[item_index]
+
+    # Now, let the user select the new category
+    for i, ctx in enumerate(config['ctx'], start=1):
+        print(f"{i}. {list(ctx.keys())[0]}")
+    to_category_index = input("Select the new category of the item by entering the number: ")
+    if to_category_index == '':  # if input is empty, return to main menu
+        return
+    to_category_index = int(to_category_index) - 1
+    to_category = list(config['ctx'][to_category_index].keys())[0]
+
+    # Now, remove the item from the old category and add it to the new one
+    md_data[entity][from_category].remove(item)
+    md_data[entity][to_category].append(item)
+    print(f"Item toggled from {from_category} to {to_category}.")
+
+
+
 
 def add_root():
     new_root = input("Enter name of new entity: ")
@@ -126,7 +174,7 @@ def remove_root():
 def select_root():
     for i, entity in enumerate(default_root_elements, start=1):
         print(f"{i}. {entity}")
-    entity_index = input(f"Select a ${entity} by entering the number, or press Enter to return to main menu: ")
+    entity_index = input(f"Select a {config['desc']} by entering the number, or press Enter to return to main menu: ")
     if entity_index == '':  # if entity input is empty, return to main menu
         return None
     entity_index = int(entity_index) - 1
@@ -141,18 +189,18 @@ def add_item(category):
         return
     selected_entity = default_root_elements[entity_index]
     
-    is_jira = input(f"Is this a {config['tracker']['id']} ticket? (y/n, default: n): ").lower() 
-    if is_jira == '':  # if entity input is empty, return to main menu
+    is_tracker = input(f"Is this a {tracker()} ticket? (y/n): ").lower() 
+    if is_tracker == '':  # if entity input is empty, return to main menu
         return
-    is_jira = is_jira == 'y'
-    jira_ticket = ""
-    if is_jira:
-        jira_ticket = input(f"Enter {config['tracker']['id']} ticket name: ")
+    is_tracker = is_tracker == 'y'
+    tracker_ticket = ""
+    if is_tracker:
+        tracker_ticket = input(f"Enter {tracker()} ticket name: ")
     description = input(f"Enter {category} description: ")
     if description == '':  # if entity input is empty, return to main menu
         return
     md_data[selected_entity][category].append({
-        "jira_ticket": jira_ticket,
+        "jira_ticket": tracker_ticket,
         "description": description
     })
 
@@ -213,7 +261,8 @@ def load_from_markdown(file_path):
     for h2 in soup.find_all('h2'):
         entity = h2.get_text()
         default_root_elements.append(entity)
-        md_data[entity] = {"[ ]": [], "✅": [], "❌": []}
+        # Ensure md_data[entity] structure matches the config
+        md_data[entity] = {list(ctx.keys())[0]: [] for ctx in config['ctx']}
         current_entity = entity
 
         table = h2.find_next_sibling('table')
@@ -232,10 +281,11 @@ def load_from_markdown(file_path):
             description = cells[2].get_text().strip()
 
             md_data[current_entity][status].append({
-                "jira_ticket": jira_ticket if jira_ticket != '-' else '',
+                f"jira_ticket": jira_ticket if jira_ticket != '-' else '',
                 "description": description
             })
     return md_data, default_root_elements
+
 
 def save_to_markdown(filename):
     with open(filename, "w") as file:
@@ -355,6 +405,9 @@ def meetdown(args):
             gist_desc = input("Enter a description for your `gist`: ")
             save_to_markdown(config['tmp'])
             upload_to_gist(config['tmp'], gist_desc)
+        elif selected_option == 2*ctx_length + 6:
+            # Toggle item
+            toggle()
         else:
             print(f"`${selected_option}` is an invalid option. \nEnter any number 1-{2*ctx_length+5} and hit return or hit return again to stash & exit")
 
