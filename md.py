@@ -228,7 +228,7 @@ def save_to_file():
     with open(f"{default_folder}{save_location}", "w") as file:
         for entity, data in md_data.items():
             file.write(f"## {entity}\n\n")
-            file.write(f"| Category | {config['tracker']['id']} Ticket | Description |\n")
+            file.write(f"| Category | {tracker()} Ticket | Description |\n")
             file.write("|----------|-------------|-------------|\n")
             no_items = True
             for category, items in data.items():
@@ -291,7 +291,7 @@ def save_to_markdown(filename):
     with open(filename, "w") as file:
         for entity, data in md_data.items():
             file.write(f"## {entity}\n\n")
-            file.write(f"| Category | {config['tracker']['id']} Ticket | Description |\n")
+            file.write(f"| Category | {tracker()} Ticket | Description |\n")
             file.write("|----------|-------------|-------------|\n")
             no_items = True
             for category, items in data.items():
@@ -351,7 +351,7 @@ def meetdown(args):
             print(f"#{now}\n")
         for entity, data in md_data.items():
             print(f"\n## {entity}\n")
-            print(f"| Status | {config['tracker']['id']} | Description |")
+            print(f"| Status | {tracker()} | Description |")
             print("|----------|-------------|-------------|")
             no_items = True
             for category, items in data.items():
