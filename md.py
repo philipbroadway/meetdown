@@ -49,7 +49,7 @@ config = {
     "ctx": [
         {"[ ]":  "[ ] in-progress"},
         {"✅":  "✅ completed"},
-        {"❌":  "❌ blocker"}
+        {"❌":  "❌ blocker"},
     ],
     "ctx-itm-lbl-enabled": 0
 }
@@ -202,18 +202,18 @@ def add_item(category):
         return
     selected_entity = default_root_elements[entity_index]
     
-    is_tracker = input(f"Is this a {tracker()} ticket? (y/n): ").lower() 
+    is_tracker = input(f"Is this a {tracker().capitalize()} ticket? (y/n): ").lower() 
     if is_tracker == '':  # if entity input is empty, return to main menu
         return
     is_tracker = is_tracker == 'y'
     tracker_ticket = ""
     if is_tracker:
-        tracker_ticket = input(f"Enter {tracker()} ticket name: ")
+        tracker_ticket = input(f"Enter {tracker().capitalize()} ID (ex: FD-12234): ")
     description = input(f"Enter {category} description: ")
     if description == '':  # if entity input is empty, return to main menu
         return
     md_data[selected_entity][category].append({
-        "jira_ticket": tracker_ticket,
+        "tracker_ticket": tracker_ticket,
         "description": description
     })
 
@@ -234,21 +234,21 @@ def remove_item(category):
         return
     item_index = int(item_index) - 1
     items.pop(item_index)
-    print(f"{category} item removed.")
+    print(f"{category} removed.")
 
 def save_to_file():
     save_location = input(f"Enter save location (default: meetdown-{now}.md): ") or f"meetdown-{now}.md"
     with open(f"{default_folder}{save_location}", "w") as file:
         for entity, data in md_data.items():
             file.write(f"## {entity}\n\n")
-            file.write(f"| Category | {tracker()} Ticket | Description |\n")
+            file.write(f"| Category | {tracker().capitalize()} Ticket | Description |\n")
             file.write("|----------|-------------|-------------|\n")
             no_items = True
             for category, items in data.items():
                   for item in items:
                       no_items = False
-                      jira_ticket = toTrackerMarkdownURL(item["jira_ticket"]) if item["jira_ticket"] else ""
-                      file.write(f"| {category} | {jira_ticket} | {item['description']} |\n")
+                      tracker_ticket = toTrackerMarkdownURL(item["tracker_ticket"]) if item["tracker_ticket"] else ""
+                      file.write(f"| {category} | {tracker_ticket} | {item['description']} |\n")
             if no_items:
               file.write("| - | - | - |\n")
               
@@ -290,11 +290,11 @@ def load_from_markdown(file_path):
                 print(f"Warn: Invalid status '{status}' for entity {current_entity}. Skipping...")
                 continue
 
-            jira_ticket = cells[1].get_text().strip()
+            tracker_ticket = cells[1].get_text().strip()
             description = cells[2].get_text().strip()
 
             md_data[current_entity][status].append({
-                f"jira_ticket": jira_ticket if jira_ticket != '-' else '',
+                f"tracker_ticket": tracker_ticket if tracker_ticket != '-' else '',
                 "description": description
             })
     return md_data, default_root_elements
@@ -304,14 +304,14 @@ def save_to_markdown(filename):
     with open(filename, "w") as file:
         for entity, data in md_data.items():
             file.write(f"## {entity}\n\n")
-            file.write(f"| Category | {tracker()} Ticket | Description |\n")
+            file.write(f"| Category | {tracker().capitalize()} Ticket | Description |\n")
             file.write("|----------|-------------|-------------|\n")
             no_items = True
             for category, items in data.items():
                 for item in items:
                     no_items = False
-                    jira_ticket = toTrackerMarkdownURL(item["jira_ticket"]) if item["jira_ticket"] else ""
-                    file.write(f"| {category.capitalize()} | {jira_ticket} | {item['description']} |\n")
+                    tracker_ticket = toTrackerMarkdownURL(item["tracker_ticket"]) if item["tracker_ticket"] else ""
+                    file.write(f"| {category.capitalize()} | {tracker_ticket} | {item['description']} |\n")
             if no_items:
                 file.write("| - | - | - |\n")
     print(f"\nkthx👋\n")
@@ -364,14 +364,14 @@ def meetdown(args):
             print(f"#{now}\n")
         for entity, data in md_data.items():
             print(f"\n## {entity}\n")
-            print(f"| Status | {tracker()} | Description |")
+            print(f"| Status | {tracker().capitalize()} | Description |")
             print("|----------|-------------|-------------|")
             no_items = True
             for category, items in data.items():
                 for item in items:
                     no_items = False
-                    jira_ticket = toTrackerMarkdownURL(item["jira_ticket"]) if item["jira_ticket"] else ""
-                    print(f"| {category.capitalize()} | {jira_ticket} | {item['description']} |")
+                    tracker_ticket = toTrackerMarkdownURL(item["tracker_ticket"]) if item["tracker_ticket"] else ""
+                    print(f"| {category.capitalize()} | {tracker_ticket} | {item['description']} |")
             if no_items:
                 print("| - | - | - |")
 
