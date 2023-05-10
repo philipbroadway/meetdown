@@ -49,7 +49,7 @@ config = {
     "ctx": [
         {"[ ]":  "[ ] in-progress"},
         {"✅":  "✅ completed"},
-        {"❌":  "❌ blocker"},
+        # {"❌":  "❌ blocker"},
     ],
     "ctx-itm-lbl-enabled": 0
 }
