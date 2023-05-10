@@ -3,6 +3,7 @@
 │││├┤ ├┤  │  │││ │││││││
 ┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
 ```
+> Markdown editor for meetups
 
 ## Prerequisites
 
