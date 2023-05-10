@@ -49,33 +49,36 @@ def generate_options():
     add_opts = []
     remove_opts = []
     other_opts = []
+    entity_opts = []
 
     if config['ctx-itm-lbl-enabled']:
-      for i, ctx in enumerate(config['ctx'], start=1):
-          for symbol, description in ctx.items():
-              add_opts.append(f"{i}. Add {description}")
-      for i, ctx in enumerate(config['ctx'], start=i+1):
-          for symbol, description in ctx.items():
-              remove_opts.append(f"{i}. Remove {description}")
-      
-      other_opts.append(f"{i+1}.Save & Quit")
-      other_opts.append(f"{i+2}.Load")
-      other_opts.append(f"{i+3}.Upload")
+        for i, ctx in enumerate(config['ctx'], start=1):
+            for symbol, description in ctx.items():
+                add_opts.append(f"{i}. Add {description}")
+        for i, ctx in enumerate(config['ctx'], start=i+1):
+            for symbol, description in ctx.items():
+                remove_opts.append(f"{i}. Remove {description}")
+        
+        entity_opts.append(f"{i+1}. Add entity")
+        entity_opts.append(f"{i+2}. Remove entity")
+        other_opts.append(f"{i+3}. Save & Quit")
+        other_opts.append(f"{i+4}. Load")
+        other_opts.append(f"{i+5}. Upload")
     else:
-      for i, ctx in enumerate(config['ctx'], start=1):
-          for symbol, description in ctx.items():
-              add_opts.append(f"{i}. Add {symbol}")
-      for i, ctx in enumerate(config['ctx'], start=i+1):
-          for symbol, description in ctx.items():
-              remove_opts.append(f"{i}. Remove {symbol}")
-      
-      other_opts.append(f"{i+1}.Save & Quit")
-      other_opts.append(f"{i+2}.Load")
-      other_opts.append(f"{i+3}.Upload")
-      
-    return "\n".join(["\t".join(add_opts), "\t".join(remove_opts), "\t".join(other_opts)])
-
-opts = f"\n________________________\n\n{generate_options()}\n"
+        for i, ctx in enumerate(config['ctx'], start=1):
+            for symbol, description in ctx.items():
+                add_opts.append(f"{i}. Add {symbol}")
+        for i, ctx in enumerate(config['ctx'], start=i+1):
+            for symbol, description in ctx.items():
+                remove_opts.append(f"{i}. Remove {symbol}")
+        
+        entity_opts.append(f"{i+1}. Add {config['id']}")
+        entity_opts.append(f"{i+2}. Remove {config['id']}")
+        other_opts.append(f"{i+3}. Save & Quit")
+        other_opts.append(f"{i+4}. Load")
+        other_opts.append(f"{i+5}. Upload")
+        
+    return "\n".join(["\t\t".join(add_opts), "\t\t".join(remove_opts),"\t\t".join(entity_opts), "\t\t".join(other_opts)])
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Process command-line arguments.')
@@ -133,13 +136,13 @@ def add_item(category):
         return
     selected_entity = default_root_elements[entity_index]
     
-    is_jira = input("Is this a Jira ticket? (y/n, default: n): ").lower() 
+    is_jira = input(f"Is this a {config['tracker']['id']} ticket? (y/n, default: n): ").lower() 
     if is_jira == '':  # if entity input is empty, return to main menu
         return
     is_jira = is_jira == 'y'
     jira_ticket = ""
     if is_jira:
-        jira_ticket = input("Enter Jira ticket name: ")
+        jira_ticket = input(f"Enter {config['tracker']['id']} ticket name: ")
     description = input(f"Enter {category} description: ")
     if description == '':  # if entity input is empty, return to main menu
         return
@@ -172,7 +175,7 @@ def save_to_file():
     with open(f"{default_folder}{save_location}", "w") as file:
         for entity, data in md_data.items():
             file.write(f"## {entity}\n\n")
-            file.write("| Category | Jira Ticket | Description |\n")
+            file.write(f"| Category | {config['tracker']['id']} Ticket | Description |\n")
             file.write("|----------|-------------|-------------|\n")
             no_items = True
             for category, items in data.items():
@@ -233,7 +236,7 @@ def save_to_markdown(filename):
     with open(filename, "w") as file:
         for entity, data in md_data.items():
             file.write(f"## {entity}\n\n")
-            file.write("| Category | Jira Ticket | Description |\n")
+            file.write(f"| Category | {config['tracker']['id']} Ticket | Description |\n")
             file.write("|----------|-------------|-------------|\n")
             no_items = True
             for category, items in data.items():
@@ -282,16 +285,18 @@ def ensure_default_ctx_items_exist_in_md_data():
             md_data[record][category] = []
 
 def meetdown(args):
-    global md_data, default_records
+    global md_data, default_records, opts
     while True:
         ensure_default_ctx_items_exist_in_md_data()
         os.system('clear')
-        print(f"{desc}\n@{default_location}\n")
+        print(f"{desc}")
         # Preview
-        print(f"# {now}\n")
+        if config["ctx-itm-lbl-enabled"]:
+            print(f"\n@{default_location}\n")
+            print(f"#{now}\n")
         for entity, data in md_data.items():
             print(f"\n## {entity}\n")
-            print("| Status | Jira Ticket | Description |")
+            print(f"| Status | {config['tracker']['id']} | Description |")
             print("|----------|-------------|-------------|")
             no_items = True
             for category, items in data.items():
@@ -303,8 +308,9 @@ def meetdown(args):
                 print("| - | - | - |")
 
         # Prompt user for an option
-        print(opts) 
+        print(f"________________________\n\nOptions:\n\n{generate_options()}\n") 
         selected_option = input("Select an option by entering the number: ")
+        
         if not selected_option:
             save_to_markdown(config['tmp'])
             break
@@ -326,20 +332,26 @@ def meetdown(args):
             category = list(config['ctx'][ctx_idx].keys())[0]
             remove_item(category)
         elif selected_option == 2*ctx_length + 1:
+            # Add entity
+            add_root()
+        elif selected_option == 2*ctx_length + 2:
+            # Remove entity
+            remove_root()
+        elif selected_option == 2*ctx_length + 3:
              # Save ctx to markdown
             save_to_file()
             break
-        elif selected_option == 2*ctx_length + 2:
+        elif selected_option == 2*ctx_length + 4:
              # Load ctx from markdown
             file_path = input("Enter the path of the Markdown file to load: ")
             md_data, default_records = load_from_markdown(file_path)
-        elif selected_option == 2*ctx_length + 3:
+        elif selected_option == 2*ctx_length + 5:
              # Save ctx & upload to gist
             gist_desc = input("Enter a description for your `gist`: ")
             save_to_markdown(config['tmp'])
             upload_to_gist(config['tmp'], gist_desc)
         else:
-            print(f"`${selected_option}` is an invalid option. \nEnter any number 1-{2*ctx_length+3} and hit return or hit return again to stash & exit")
+            print(f"`${selected_option}` is an invalid option. \nEnter any number 1-{2*ctx_length+5} and hit return or hit return again to stash & exit")
 
 
 args = parse_arguments()
