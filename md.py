@@ -5,6 +5,7 @@ NAME="""
 ________________________
 """
 import os
+import time
 import getpass
 import requests
 import json
@@ -195,57 +196,49 @@ class MeetDown:
           print(f"New {selected_item_type} item added for {selected_entity}.")
 
     def remove(self):
-        # Print all items and let the user select one to remove
-        items = []
-        item_count = 0
-        for entity, data in self.md_data.items():
-            for category, category_items in data.items():
-                for item in category_items:
-                    item_count += 1
-                    print(f"{item_count}. {category} for {entity} - {item['description']}")
-                    items.append({
-                        "index": item_count,
-                        "entity": entity,
-                        "category": category,
-                        "item": item
-                    })
-        for key in self.md_data.keys():
+      # Prepare a list of all items, each entity and each entity's category items
+      items = []
+      item_count = 0
+      for entity, data in self.md_data.items():
+          # Append each entity to the list
           item_count += 1
-          entity = {"index": len(items), "entity": key, "item_type": self.config['id']}
-          print(f"{item_count}. {self.config['id']} {entity['entity']}")
-          items.append(entity)
-        # Ask the user to select an item to remove
-        item_index = input("Enter the number of the item to remove: ")
-        if item_index == '':  # if input is empty, return to main menu
-            return
-        
-        item_index = int(item_index) - 1
-        item = items[item_index]
-        if item['entity'] == self.config['id']:
-            self.md_data.pop(item['entity'])
-            print(f"Removed: {self.config['id']} {item['entity']}")
-        elif item['entity'] in self.config['status-types']:
-          selected_item = items[item_index]
-          
-          if 'category' in selected_item:
-            self.md_data[selected_item['entity']][selected_item['category']].remove(selected_item['item'])
-            print(f"Removed: {selected_item['category']} for {selected_item['entity']} - {selected_item['item']['description']}")
+          print(f"{item_count}. {self.config['id']} {entity}")
+          items.append({
+              "index": item_count,
+              "entity": entity,
+              "type": "entity"
+          })
 
-        item = items[int(item_index) - 1]
-        
-        selected_entity = item['entity']
-        # selected_item_type = item['item_type']
-        selected_item_index = item['index']
+          # Append each entity's category items to the list
+          for category, category_items in data.items():
+              for item in category_items:
+                  item_count += 1
+                  print(f"{item_count}. {category} for {entity} - {item['description']}")
+                  items.append({
+                      "index": item_count,
+                      "entity": entity,
+                      "category": category,
+                      "item": item,
+                      "type": "item"
+                  })
 
-        if selected_entity == self.config['id']:
-          entity_index = self.select_entity()
-          if entity_index is None:
-              return
-          selected_entity = self.config['status-types'][entity_index]
-          self.config['status-types'].pop(entity_index)
-          self.md_data.pop(selected_entity)
-          print(f"➖  '{selected_entity}'")
-          # remove_root()
+      # Ask the user to select an item or entity to remove
+      item_index = input("Enter the number of the item to remove: ")
+      if item_index == '':  # if input is empty, return to main menu
+          return
+
+      item_index = int(item_index) - 1
+      selected_item = items[item_index]
+
+      if selected_item['type'] == 'entity':
+          # If an entity was selected, remove the entity
+          self.md_data.pop(selected_item['entity'])
+          print(f"Removed: {self.config['id']} {selected_item['entity']}")
+      else:
+          # If an item was selected, remove the item from its entity's category
+          self.md_data[selected_item['entity']][selected_item['category']].remove(selected_item['item'])
+          print(f"Removed: {selected_item['category']} for {selected_item['entity']} - {selected_item['item']['description']}")
+
 
     def select_entity(self):
         for i, entity in enumerate(self.config['status-types'], start=1):
@@ -279,58 +272,58 @@ class MeetDown:
                 for category, items in data.items():
                       for item in items:
                           no_items = False
-                          external_ticket = self.toMarkdownExternalURL( item["external_ticket"]) if item["external_ticket"] else ""
+                          external_ticket = self.toMarkdownExternalURL(item.get("external_ticket")) if item.get("external_ticket") else ""
                           file.write(f"| {category} | {external_ticket} | {item['description']} |\n")
                 file.write("\n")
                 interval += 1
         print(f"\n💾:\n{save_location}\n")
 
     def load_from_markdown(self, file_path):
-
         if not os.path.isfile(file_path.strip()):
           print(f"Error: No such file or directory: '{file_path.strip()}'")
-          return
+          return None, None
 
         with open(file_path, 'r') as file:
             md = file.read()
 
-        html = self.markdown.markdown( md, extensions=['tables'])
-        soup = BeautifulSoup(html, features="html.parser")
+            html = markdown.markdown( md, extensions=['tables'])
+            soup = BeautifulSoup(html, features="html.parser")
 
-        data = {}
-        self.config['status-types'] = []
+            data = {}
+            self.config['status-types'] = []
+            self.config['ctx'] = []
+            current_entity = None
+            for h2 in soup.find_all('h2'):
+                entity = h2.get_text()
+                self.config['status-types'].append(entity)
 
-        current_entity = None
-        for h2 in soup.find_all('h2'):
-            entity = h2.get_text()
-            self.config['status-types'].append(entity)
+                # Initialize data[entity] based on the config's ctx
+                data[entity] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}
+                current_entity = entity
 
-            # Initialize data[entity] based on the config's ctx
-            data[entity] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}
-            current_entity = entity
+                table = h2.find_next_sibling('table')
+                if table is None:
+                    print(f"Warn: No table found for entity {current_entity}. Skipping...")
+                    continue
 
-            table = h2.find_next_sibling('table')
-            if table is None:
-                print(f"Warn: No table found for entity {current_entity}. Skipping...")
-                continue
+                for row in table.find_all('tr')[1:]:
+                    cells = row.find_all('td')
+                    status = cells[0].get_text().strip()
+                    print(f"Info: Found status '{status}' for entity {current_entity}.")
+                    # If status not in data[current_entity], add it dynamically
+                    if status not in data[current_entity]:
+                        print(f"Info: New status '{status}' found for entity {current_entity}. Adding it...")
+                        self.config['ctx'].append({status: status})
+                        data[current_entity][status] = []
 
-            for row in table.find_all('tr')[1:]:
-                cells = row.find_all('td')
-                status = cells[0].get_text().strip()
+                    jira_ticket = cells[1].get_text().strip()
+                    description = cells[2].get_text().strip()
 
-                # If status not in data[current_entity], add it dynamically
-                if status not in data[current_entity]:
-                    print(f"Info: New status '{status}' found for entity {current_entity}. Adding it...")
-                    self.config['ctx'].append({status: status})
-                    data[current_entity][status] = []
-
-                jira_ticket = cells[1].get_text().strip()
-                description = cells[2].get_text().strip()
-
-                data[current_entity][status].append({
-                    "jira_ticket": jira_ticket if jira_ticket != '-' else '',
-                    "description": description
-                })
+                    data[current_entity][status].append({
+                        "jira_ticket": jira_ticket if jira_ticket != '-' else '',
+                        "description": description
+                    })
+                    time.sleep(1)
         self.md_data = data
         return data, self.config['status-types']
 
@@ -410,7 +403,11 @@ class MeetDown:
             elif selected_option == 4:
                 # Load ctx from markdown
                 file_path = input(f"{self.config['prompt-save-location']}: ")
-                self.load_from_markdown( file_path)
+                loaded_data, loaded_status_types = self.load_from_markdown(file_path)
+                if loaded_data is not None and loaded_status_types is not None:
+                    self.md_data = loaded_data
+                    self.config['status-types'] = loaded_status_types
+
             elif selected_option == 5:
                 # Save ctx to markdown
                 self.save_to_file()
@@ -424,13 +421,19 @@ class MeetDown:
                 print(f"`${selected_option}` is an invalid option. \nEnter any number 1-{2*ctx_length+5} and hit return or hit return again to stash & exit")
 
     def main(self):
-        args = self.parse_arguments()
-        self.md_data = {entity: {list(ctx.keys())[0]: [] for ctx in self.config['ctx']} for entity in args.entities}
-        self.config['status-types'] = args.entities
-        self.config['title'] = args.title
-        self.config['folder'] = args.out
-        self.clear_screen()
-        self.meetdown( args)
+      args = self.parse_arguments()
+      loaded_data, loaded_status_types = self.load_from_markdown(self.config['tmp'])  # Load the data from the specified file
+      print(f"Loaded data: {loaded_data} \nLoaded status types: {loaded_status_types}")
+      time.sleep(3)
+      if loaded_data is not None and loaded_status_types is not None:
+          # Update the md_data and status-types with the loaded data
+          self.md_data = loaded_data
+          self.config['status-types'] = loaded_status_types
+      else:
+          # Display an error message and continue with default data
+          print("Failed to load data from file. Continuing with default configuration.")
+          time.sleep(3)
+      self.meetdown(args)
 
 if __name__ == "__main__":
     meetdown = MeetDown(MeetDown.default_config())
