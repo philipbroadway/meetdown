@@ -277,55 +277,129 @@ class MeetDown:
                 file.write("\n")
                 interval += 1
         print(f"\n💾:\n{save_location}\n")
-
+      
     def load_from_markdown(self, file_path):
-        if not os.path.isfile(file_path.strip()):
-          print(f"Error: No such file or directory: '{file_path.strip()}'")
-          return None, None
+        # Check if the file exists
+        if not os.path.isfile(file_path):
+            print(f"No such file: {file_path}")
+            return None, None
 
-        with open(file_path, 'r') as file:
-            md = file.read()
+        with open(file_path, "r") as file:
+            md_text = file.read()
 
-            html = markdown.markdown( md, extensions=['tables'])
-            soup = BeautifulSoup(html, features="html.parser")
+        # Convert markdown to HTML using markdown package
+        html = markdown.markdown(md_text)
 
-            data = {}
-            self.config['status-types'] = []
-            self.config['ctx'] = []
-            current_entity = None
-            for h2 in soup.find_all('h2'):
-                entity = h2.get_text()
-                self.config['status-types'].append(entity)
+        # Use BeautifulSoup to parse the HTML
+        soup = BeautifulSoup(html, 'html.parser')
 
-                # Initialize data[entity] based on the config's ctx
-                data[entity] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}
-                current_entity = entity
+        # Get the title from the first h1 element
+        h1 = soup.find('h1')
+        if h1:
+            self.config['title'] = h1.text
 
-                table = h2.find_next_sibling('table')
-                if table is None:
-                    print(f"Warn: No table found for entity {current_entity}. Skipping...")
-                    continue
+        # Initialize an empty dict for md_data
+        md_data = {}
+        status_types = []
 
-                for row in table.find_all('tr')[1:]:
-                    cells = row.find_all('td')
-                    status = cells[0].get_text().strip()
-                    print(f"Info: Found status '{status}' for entity {current_entity}.")
-                    # If status not in data[current_entity], add it dynamically
-                    if status not in data[current_entity]:
-                        print(f"Info: New status '{status}' found for entity {current_entity}. Adding it...")
-                        self.config['ctx'].append({status: status})
-                        data[current_entity][status] = []
+        # Find all h2 elements (representing entities)
+        h2_elements = soup.find_all('h2')
+        for h2 in h2_elements:
+            entity = h2.text
+            status_types.append(entity)
+            md_data[entity] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}  # Initialize with empty lists
 
-                    jira_ticket = cells[1].get_text().strip()
-                    description = cells[2].get_text().strip()
+            # Find all next siblings of this h2 element
+            for sibling in h2.next_siblings:
+                # If the sibling is a table, process it
+                if sibling.name == 'table':
+                    # Iterate over each row in the table body
+                    for row in sibling.tbody.find_all('tr'):
+                        # Get the data from the columns
+                        cols = row.find_all('td')
+                        if len(cols) >= 3:
+                            # Extract the category, external_ticket, and description
+                            category = cols[0].text
+                            external_ticket = cols[1].text
+                            description = cols[2].text
 
-                    data[current_entity][status].append({
-                        "jira_ticket": jira_ticket if jira_ticket != '-' else '',
-                        "description": description
-                    })
-                    time.sleep(1)
-        self.md_data = data
-        return data, self.config['status-types']
+                            print(f"Adding {category} for {entity} - {description}")
+
+                            # If there is a hyperlink in the external_ticket, extract the ticket ID from the URL
+                            a = cols[1].find('a')
+                            if a and a['href'].startswith(self.config['external']['url']):
+                                external_ticket = a['href'][len(self.config['external']['url']):]
+
+                            # Append the item to the correct category in the md_data
+                            md_data[entity][category].append({
+                                "external_ticket": external_ticket,
+                                "description": description
+                            })
+                # If the sibling is another h2, stop processing tables for this h2
+                elif sibling.name == 'h2':
+                    break
+
+        return md_data, status_types
+
+
+
+    # def load_from_markdown(self, file_path):
+    # # Check if the file exists
+    #   if not os.path.isfile(file_path):
+    #       print(f"No such file: {file_path}")
+    #       return None, None
+
+    #   with open(file_path, "r") as file:
+    #       md_text = file.read()
+
+    #   # Convert markdown to HTML using markdown package
+    #   html = markdown.markdown(md_text)
+
+    #   # Use BeautifulSoup to parse the HTML
+    #   soup = BeautifulSoup(html, 'html.parser')
+
+    #   # Get the title from the first h1 element
+    #   h1 = soup.find('h1')
+    #   if h1:
+    #       self.config['title'] = h1.text
+
+    #   # Initialize an empty dict for md_data
+    #   md_data = {}
+    #   status_types = []
+
+    #   # Find all h2 elements (representing entities)
+    #   h2_elements = soup.find_all('h2')
+    #   for h2 in h2_elements:
+    #       entity = h2.text
+    #       status_types.append(entity)
+    #       md_data[entity] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}  # Initialize with empty lists
+
+    #       # Find the next table after this h2 element
+    #       table = h2.find_next('table')
+    #       if table:
+    #           # Iterate over each row in the table body
+    #           for row in table.tbody.find_all('tr'):
+    #               # Get the data from the columns
+    #               cols = row.find_all('td')
+    #               if len(cols) >= 3:
+    #                   # Extract the category, external_ticket, and description
+    #                   category = cols[0].text
+    #                   external_ticket = cols[1].text
+    #                   description = cols[2].text
+
+    #                   # If there is a hyperlink in the external_ticket, extract the ticket ID from the URL
+    #                   a = cols[1].find('a')
+    #                   if a and a['href'].startswith(self.config['external']['url']):
+    #                       external_ticket = a['href'][len(self.config['external']['url']):]
+
+    #                   # Append the item to the correct category in the md_data
+    #                   md_data[entity][category].append({
+    #                       "external_ticket": external_ticket,
+    #                       "description": description
+    #                   })
+
+    #   return md_data, status_types
+
 
     def write(self,filename, buhbye=False):
         with open(filename, "w") as file:
@@ -401,13 +475,14 @@ class MeetDown:
                 # Toggle item
                 self.toggle()
             elif selected_option == 4:
-                # Load ctx from markdown
-                file_path = input(f"{self.config['prompt-save-location']}: ")
-                loaded_data, loaded_status_types = self.load_from_markdown(file_path)
-                if loaded_data is not None and loaded_status_types is not None:
-                    self.md_data = loaded_data
-                    self.config['status-types'] = loaded_status_types
-
+              file_path = input(f"{self.config['prompt-save-location']}: ")
+              loaded_data, loaded_status_types = self.load_from_markdown(file_path)
+              print(f"Loaded data: {loaded_data}")  # Add this line
+              print(f"Loaded status types: {loaded_status_types}")  # Add this line
+              if loaded_data is not None and loaded_status_types is not None:
+                  self.md_data = loaded_data
+                  self.config['status-types'] = loaded_status_types
+              time.sleep(15)
             elif selected_option == 5:
                 # Save ctx to markdown
                 self.save_to_file()
