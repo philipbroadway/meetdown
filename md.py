@@ -21,35 +21,23 @@ now.strftime("%m-%d-%Y-")
 
 # Default config
 config = {
-    # 'debug': A debug flag (0 = off, 1 = on).
-    # 'folder': The directory where the markdown file will be saved.
-    # 'location': The name of the markdown file.
-    # 'tmp': The name of the temporary markdown file.
-    # 'id': An emoji or string to represent an entity (user).
-    # 'desc': A description of the 'id'.
-    # 'tracker': A dictionary with 'id' and 'url' for linking to a ticket tracking system (like Jira).
-    # 'ctx': A list of dictionaries representing different categories or statuses of work items. 
-    #        Each dictionary should contain a unique key-value pair. 
-    #        The key can be any string or emoji and represents the status symbol. 
-    #        The value is a description of the status.
-    #        **Dynamically controlls list of items that can be added/removed/swapped/toggled.**
-    #        For example, ctx[{"📝":  "📝 notes"}..rest] Would create a status symbol of 📝 and a description of 📝 notes & list options to add, remove, or toggle the status.
-    # 'ctx-itm-lbl-enabled': A flag to control whether the labels (values from 'ctx' dictionaries) are shown (1 = enabled, 0 = disabled).
-
     "debug": 0,
-    "folder": "",
-    "location": f"meetdown-{now}.md",
-    "tmp": "meetdown-tmp.md",
+    "folder": f"{os.getcwd()}",
+    "location": f"meetdown.md",
+    "tmp": ".meetdown.md",
     "id": "👤",
     "desc": "👤 person",
-    "tracker": {
+    "prompt-main": "Select an option by number",
+    "external": {
         "id": "jira",
         "url": "https://frontdeskhq.atlassian.net/jira/software/c/projects/FD/boards/7/backlog?view=detail&selectedIssue="
     },
     "ctx": [
-        {"[ ]":  "[ ] in-progress"},
-        {"✅":  "✅ completed"},
-        # {"❌":  "❌ blocker"},
+        {"⬜":  "⬜ todo"},
+        {"🛠️":  "🛠️ in-progress"},
+        {"🔎":  "🔎 qa"},
+        {"✅":  "✅ done"},
+        {"🚫":  "🚫 blocked"},
     ],
     "ctx-itm-lbl-enabled": 0
 }
@@ -74,7 +62,6 @@ def itemTypes(config):
 def generate_options():
     opts = []
 
-    entity_id = config['id']
     i = 0
     opts.append(f"{i+1}. Add")
     opts.append(f"{i+2}. Remove")
@@ -106,11 +93,11 @@ def clear_screen():
     elif os.name == 'nt':
         os.system('cls')
 
-def tracker():
-    return config['tracker']['id']
+def external():
+    return config['external']['id']
 
 def toTrackerMarkdownURL(ticket):
-    return f"[{ticket}]({config['tracker']['url']}{ticket})"
+    return f"[{ticket}]({config['external']['url']}{ticket})"
 
 def toggle():
     # First, create a flat list of all items
@@ -128,7 +115,7 @@ def toggle():
     # Now, print all items and let the user select one
     for i, (entity, category, item) in enumerate(all_items, start=1):
         print(f"{i}. {entity} - {category} - {item['description']}")
-    item_index = input("Enter the number of the item to toggle, or press Enter to return to main menu: ")
+    item_index = input(f"Toggle {entity} {category} to?: ")
     if item_index == '':  # if input is empty, return to main menu
         return
     item_index = int(item_index) - 1
@@ -157,31 +144,27 @@ def addable_items():
         for category, items in data.items():
             for item in items:
                 all_items.append((entity, category, item))
-
-def addable_items():
-    # First, create a flat list of all items
-    all_items = []
-    for entity, data in md_data.items():
-        for category, items in data.items():
-            for item in items:
-                all_items.append((entity, category, item))
+    return all_items
 
 def add():
     # Get the list of all types of items
     item_types = itemTypes(config)
-    item_count = 0
+    item_count = 1
     # Print all item types and let the user select one
     items = []
+    print(f"______________\n\nAdd\n")
     for i, item_type in enumerate(item_types, start=1):
         for n, entity in enumerate(default_root_elements, start=1):
+          if item_count == 1:
+            items = [{"index": 1, "entity": entity, "item_type": item_type}]
           item_count += 1
-          print(f"{item_count}. Add {item_type} for {entity}")
+          print(f"{item_count}. {entity}-{item_type}")
           items.append({"index": i, "entity": entity, "item_type": item_type})
     item_count += 1
-    print(f"{item_count}. Add {config['id']}")
+    print(f"{item_count}. {config['id']}")
     items.append({"index": i+1, "entity": config['id'], "item_type": config['id']})
     
-    item_type_index = input("Enter the number of the item type to add, or press Enter to return to main menu: ")
+    item_type_index = input("\nEnter number: ")
     if item_type_index == '':  # if input is empty, return to main menu
         return
 
@@ -192,13 +175,17 @@ def add():
     selected_item_index = item['index']
 
     if selected_entity == config['id']:
-      add_root()
+      new_root = input(f"Enter name for {config['desc']}: ")
+      # Initialize an empty list for each category in config's context
+      md_data[new_root] = {list(ctx.keys())[0]: [] for ctx in config['ctx']}
+      default_root_elements.append(new_root)
+      print(f"➕  '{new_root}'")
 
     else:
       # Ask for the details of the new item
-      is_tracker = input(f"Is this a {tracker().capitalize()} ticket? (y/n): ").lower() 
+      is_tracker = input(f"Is this a {external().capitalize()} ticket? (y/n): ").lower() 
       if is_tracker == 'y':
-          tracker_ticket = input(f"Enter {tracker().capitalize()} ID (ex: FD-12234): ")
+          tracker_ticket = input(f"Enter {external().capitalize()} ID (ex: FD-12234): ")
       else:
           tracker_ticket = ''
       description = input(f"Enter {selected_item_type} description: ")
@@ -246,13 +233,13 @@ def remove():
       default_root_elements.pop(entity_index)
       md_data.pop(selected_entity)
       print(f"➖  '{selected_entity}'")
-      remove_root()
+      # remove_root()
 
     else:
       # Ask for the details of the new item
-      is_tracker = input(f"Is this a {tracker().capitalize()} ticket? (y/n): ").lower() 
+      is_tracker = input(f"Is this a {external().capitalize()} ticket? (y/n): ").lower() 
       if is_tracker == 'y':
-          tracker_ticket = input(f"Enter {tracker().capitalize()} ID (ex: FD-12234): ")
+          tracker_ticket = input(f"Enter {external().capitalize()} ID (ex: FD-12234): ")
       else:
           tracker_ticket = ''
       description = input(f"Enter {selected_item_type} description: ")
@@ -275,15 +262,6 @@ def add_root():
     default_root_elements.append(new_root)
     print(f"➕  '{new_root}'")
 
-def remove_root():
-    entity_index = select_root()
-    if entity_index is None:
-        return
-    selected_entity = default_root_elements[entity_index]
-    default_root_elements.pop(entity_index)
-    md_data.pop(selected_entity)
-    print(f"➖  '{selected_entity}'")
-
 def select_root():
     for i, entity in enumerate(default_root_elements, start=1):
         print(f"{i}. {entity}")
@@ -296,52 +274,14 @@ def select_root():
         return None
     return entity_index
 
-def add_item(category):
-    entity_index = select_root()
-    if entity_index is None:
-        return
-    selected_entity = default_root_elements[entity_index]
-    
-    is_tracker = input(f"Is this a {tracker().capitalize()} ticket? (y/n): ").lower() 
-    if is_tracker == '':  # if entity input is empty, return to main menu
-        return
-    is_tracker = is_tracker == 'y'
-    tracker_ticket = ""
-    if is_tracker:
-        tracker_ticket = input(f"Enter {tracker().capitalize()} ID (ex: FD-12234): ")
-    description = input(f"Enter {category} description: ")
-    if description == '':  # if entity input is empty, return to main menu
-        return
-    md_data[selected_entity][category].append({
-        "tracker_ticket": tracker_ticket,
-        "description": description
-    })
-
-def remove_item(category):
-    entity_index = select_root()
-    if entity_index is None:
-        return
-    selected_entity = default_root_elements[entity_index]
-    items = md_data[selected_entity][category]
-    if not items:
-        print(f"⛔ No {category} items to remove.")
-        return
-    print(f"{selected_entity}'s {category} items:")
-    for i, item in enumerate(items, start=1):
-        print(f"{i}. {item['description']}")
-    item_index = input(f"Enter the number of the {category} item to remove, or press Enter to return to main menu: ")
-    if item_index == '':  # if entity input is empty, return to main menu
-        return
-    item_index = int(item_index) - 1
-    items.pop(item_index)
-    print(f"{category} removed.")
-
 def save_to_file():
     save_location = input(f"Enter save location (default: meetdown-{now}.md): ") or f"meetdown-{now}.md"
     with open(f"{default_folder}{save_location}", "w") as file:
+        interval = 0
         for entity, data in md_data.items():
-            file.write(f"## {entity}\n\n")
-            file.write(f"| Category | {tracker().capitalize()} Ticket | Description |\n")
+            new_line = "\n" if interval > 0 else ""
+            file.write(f"{new_line}## {entity}\n\n")
+            file.write(f"| Category | {external().capitalize()} Ticket | Description |\n")
             file.write("|----------|-------------|-------------|\n")
             no_items = True
             for category, items in data.items():
@@ -349,16 +289,15 @@ def save_to_file():
                       no_items = False
                       tracker_ticket = toTrackerMarkdownURL(item["tracker_ticket"]) if item["tracker_ticket"] else ""
                       file.write(f"| {category} | {tracker_ticket} | {item['description']} |\n")
-            if no_items:
-              file.write("| - | - | - |\n")
-              
-    print(f"Saved to:\n{default_folder}{save_location}\n")
+            file.write("\n")
+            interval += 1
+    print(f"\n💾:\n{default_folder}{save_location}\n")
 
 def load_from_markdown(file_path):
-    global md_data, default_root_elements
+    global md_data, default_root_elements, config
 
     if not os.path.isfile(file_path.strip()):
-      print(f"⛔ Error: No such file or directory: '{file_path.strip()}'")
+      print(f"Error: No such file or directory: '{file_path.strip()}'")
       return
 
     with open(file_path, 'r') as file:
@@ -367,15 +306,16 @@ def load_from_markdown(file_path):
     html = markdown.markdown(md, extensions=['tables'])
     soup = BeautifulSoup(html, features="html.parser")
 
-    md_data = {}
+    data = {}
     default_root_elements = []
 
     current_entity = None
     for h2 in soup.find_all('h2'):
         entity = h2.get_text()
         default_root_elements.append(entity)
-        # Ensure md_data[entity] structure matches the config
-        md_data[entity] = {list(ctx.keys())[0]: [] for ctx in config['ctx']}
+
+        # Initialize data[entity] based on the config's ctx
+        data[entity] = {list(ctx.keys())[0]: [] for ctx in config['ctx']}
         current_entity = entity
 
         table = h2.find_next_sibling('table')
@@ -386,25 +326,35 @@ def load_from_markdown(file_path):
         for row in table.find_all('tr')[1:]:
             cells = row.find_all('td')
             status = cells[0].get_text().strip()
-            if status not in md_data[current_entity]:
-                print(f"Warn: Invalid status '{status}' for entity {current_entity}. Skipping...")
-                continue
 
-            tracker_ticket = cells[1].get_text().strip()
+            # If status not in data[current_entity], add it dynamically
+            if status not in data[current_entity]:
+                print(f"Info: New status '{status}' found for entity {current_entity}. Adding it...")
+                config['ctx'].append({status: status})
+                data[current_entity][status] = []
+
+            jira_ticket = cells[1].get_text().strip()
             description = cells[2].get_text().strip()
 
-            md_data[current_entity][status].append({
-                f"tracker_ticket": tracker_ticket if tracker_ticket != '-' else '',
+            data[current_entity][status].append({
+                "jira_ticket": jira_ticket if jira_ticket != '-' else '',
                 "description": description
             })
-    return md_data, default_root_elements
+    md_data = data
+    return data, default_root_elements
+
+
 
 
 def save_to_markdown(filename):
     with open(filename, "w") as file:
+        # First, write the default_root_elements
+        # file.write(f"default_root_elements: {', '.join(default_root_elements)}\n\n")
+        interval = 0
         for entity, data in md_data.items():
-            file.write(f"## {entity}\n\n")
-            file.write(f"| Category | {tracker().capitalize()} Ticket | Description |\n")
+            new_line = "\n\n" if interval > 0 else ""
+            file.write(f"{new_line}## {entity}\n\n")
+            file.write(f"| Category | {external().capitalize()} Ticket | Description |\n")
             file.write("|----------|-------------|-------------|\n")
             no_items = True
             for category, items in data.items():
@@ -412,8 +362,7 @@ def save_to_markdown(filename):
                     no_items = False
                     tracker_ticket = toTrackerMarkdownURL(item["tracker_ticket"]) if item["tracker_ticket"] else ""
                     file.write(f"| {category.capitalize()} | {tracker_ticket} | {item['description']} |\n")
-            if no_items:
-                file.write("| - | - | - |\n")
+            
     print(f"\nkthx👋\n")
 
 def upload_to_gist(filename, description=""):
@@ -453,7 +402,9 @@ def ensure_default_ctx_items_exist_in_md_data():
             md_data[record][category] = []
 
 def meetdown(args):
-    global md_data, default_records, opts
+    global md_data, default_root_elements
+    md_data = {entity: {list(ctx.keys())[0]: [] for ctx in config['ctx']} for entity in args.entities}
+    default_root_elements = args.entities
     while True:
         ensure_default_ctx_items_exist_in_md_data()
         os.system('clear')
@@ -464,7 +415,7 @@ def meetdown(args):
             print(f"#{now}\n")
         for entity, data in md_data.items():
             print(f"\n## {entity}\n")
-            print(f"| Status | {tracker().capitalize()} | Description |")
+            print(f"| Status | {external().capitalize()} | Description |")
             print("|----------|-------------|-------------|")
             no_items = True
             for category, items in data.items():
@@ -477,11 +428,14 @@ def meetdown(args):
 
         # Prompt user for an option
         print(f"________________________\n\nOptions:\n\n{generate_options()}\n") 
-        selected_option = input("Select an option by entering the number: ")
+        selected_option = input(f"{config['prompt-main']}: ")
         
+         # If user hits return with no input, save the temporary file and exit
         if not selected_option:
+            ensure_default_ctx_items_exist_in_md_data()
             save_to_markdown(config['tmp'])
             break
+        
         try:
             selected_option = int(selected_option)
         except ValueError:
@@ -501,7 +455,7 @@ def meetdown(args):
         elif selected_option == 4:
             # Load ctx from markdown
             file_path = input("Enter the path of the Markdown file to load: ")
-            md_data, default_records = load_from_markdown(file_path)
+            load_from_markdown(file_path)
         elif selected_option == 5:
             # Save ctx to markdown
             save_to_file()
@@ -515,33 +469,36 @@ def meetdown(args):
             print(f"`${selected_option}` is an invalid option. \nEnter any number 1-{2*ctx_length+5} and hit return or hit return again to stash & exit")
 
 
-args = parse_arguments()
+def main():
+    args = parse_arguments()
 
-# Initialize tmp_file_found and tmp_file_action
-tmp_file_found = False
-tmp_file_action = 0
+    # Initialize tmp_file_found and tmp_file_action
+    tmp_file_found = False
+    tmp_file_action = 0
 
-# Check for temp file at the start of the program
-if os.path.exists(tmp_filename):
-    tmp_file_found = True
-    print(f"Temporary file {tmp_filename} found.")
-    print("1. Load from temporary file")
-    print("2. Delete temporary file")
-    tmp_file_action = int(input("Select an option by entering the number: "))
-    if tmp_file_action == 1:
+    # Check for temp file at the start of the program
+    if os.path.exists(tmp_filename):
+        tmp_file_found = True
+        print(f"Temporary file {tmp_filename} found.")
+        print("1. Load from temporary file")
+        print("2. Delete temporary file")
+        tmp_file_action = int(input("Select an option by entering the number: "))
+        if tmp_file_action == 1:
+            md_data, default_root_elements = load_from_markdown(tmp_filename)
+        elif tmp_file_action == 2:
+            os.remove(tmp_filename)
+
+    if tmp_file_found and tmp_file_action == 1:
         md_data, default_root_elements = load_from_markdown(tmp_filename)
-    elif tmp_file_action == 2:
-        os.remove(tmp_filename)
+    else:
+        md_data = {entity: {list(ctx.keys())[0]: [] for ctx in config['ctx']} for entity in args.entities}
+        default_root_elements = args.entities
+        default_location = args.title
+        default_folder = args.out
 
-if tmp_file_found and tmp_file_action == 1:
-    load_from_markdown(tmp_filename)
-else:
-    md_data = {entity: {list(ctx.keys())[0]: [] for ctx in config['ctx']} for entity in args.entities}
-    default_root_elements = args.entities
-    default_location = args.title
-    default_folder = args.out
+    clear_screen()
 
-clear_screen()
+    meetdown(args)
 
-meetdown(args)
-
+if __name__ == "__main__":
+    main()
