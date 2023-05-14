@@ -8,11 +8,10 @@
 ## Prerequisites
 
 * Python 3 >= 3.6
-* requests
-* python-dotenv
-* beautifulsoup4
-* unitest
 * panflute
+* bs4
+* redis
+* pytest
 --or--
 * Docker
 
