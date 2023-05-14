@@ -29,7 +29,7 @@ chmod +x /path/to/md.py
 
 Quickstart:
 ```bash
-docker-compose run app
+docker-compose run meetdown
 
 ```
 
