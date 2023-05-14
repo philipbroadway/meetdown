@@ -15,8 +15,9 @@ from bs4 import BeautifulSoup
 class MeetDown:
     @staticmethod
     def default_config():
-        return {
-          "users": getpass.getuser(),
+        
+        res = {
+            "users": getpass.getuser(),
           "title": f".meetdown.md",
           "folder": f"{os.getcwd()}",
           "tmp": ".meetdown.md",
@@ -46,7 +47,11 @@ class MeetDown:
           "status-types-selections-invalid": "⛔ Invalid selection.",
           "separator-1": "________________________",
           "separator-2": "______________",
-    }
+          "table-header": "| ID  | $external_id | Description |",
+          "table-header-divider": "----------",
+        }
+        res["table-separator"] = f"| {res['table-header-divider']} | {res['table-header-divider']} |"
+        return res
 
     def __init__(self, config):
         self.config = config
@@ -133,6 +138,11 @@ class MeetDown:
         to_category = list(self.config['ctx'][to_category_index].keys())[0]
 
         # Now, remove the item from the old category and add it to the new one
+        print(f"Moving item from {from_category} to {to_category}...")
+        print(f"self.md_data[entity]:{self.md_data[entity]}")
+        # if self.md_data[entity] doesnt have to_category add it
+        if to_category not in self.md_data[entity]:
+          self.md_data[entity][to_category] = []
         self.md_data[entity][from_category].remove(item)
         self.md_data[entity][to_category].append(item)
         print(f"Item toggled from {from_category} to {to_category}.")
@@ -263,7 +273,8 @@ class MeetDown:
                 new_line = "\n" if interval > 0 else ""
                 file.write(f"{new_line}## {entity}\n\n")
                 file.write(f"| Category | {self.external().capitalize()} Ticket | Description |\n")
-                file.write("|----------|-------------|-------------|\n")
+                file.write(f"{self.config['table-separator']}\n")
+                
                 no_items = True
                 for category, items in data.items():
                       for item in items:
@@ -275,45 +286,76 @@ class MeetDown:
         print(f"\n💾:\n{save_location}\n")
       
     def load_from_markdown(self, file_path):
-        if not os.path.isfile(file_path.strip()):
-            print(f"Error: No such file or directory: '{file_path.strip()}'")
-            return
+      if not os.path.isfile(file_path.strip()):
+          print(f"Error: No such file or directory: '{file_path.strip()}'")
+          return
 
-        with open(file_path, 'r') as file:
-            content = file.read()
+      with open(file_path, 'r') as file:
+          content = file.read()
 
-        entity_headers = re.findall(r'##\s+(.+)\s+', content)
-        print(entity_headers)
-        data = {}
+      entity_headers = re.findall(r'##\s+(.+)\s+', content)
+      data = {}
 
-        for entity_header in entity_headers:
-            entity_regex = r'##\s+' + re.escape(entity_header) + r'\s+.*\|.*\|.*\|.*\n((?:.*\|.*\|.*\|.*\n)*)'
-            entity_match = re.search(entity_regex, content)
-            print(entity_match)
-            if entity_match:
-                entity_content = entity_match.group(1)
-                category_regex = r'\|(.+)\|(.+)\|(.+)\|'
-                category_matches = re.findall(category_regex, entity_content)
-                if category_matches:
-                    data[entity_header] = {}
-                    index=0
-                    for category_match in category_matches:
-                        category = category_match[0].strip()
-                        jira_ticket = category_match[1].strip()
-                        description = category_match[2].strip()
-                        if index == 0:
-                            index += 1
-                            continue
+      for entity_header in entity_headers:
+          entity_regex = r'##\s+' + re.escape(entity_header) + r'\s+.*\|.*\|.*\|.*\n((?:.*\|.*\|.*\|.*\n)*)'
+          entity_match = re.search(entity_regex, content)
+          if entity_match:
+              entity_content = entity_match.group(1)
+              category_regex = r'\|(.+)\|(.+)\|(.+)\|'
+              category_matches = re.findall(category_regex, entity_content)
+              if self.config['debug']:
+                print(f"category_matches: {category_matches}", entity_content)
+              if category_matches:
+                  data[entity_header] = {}
+                  for category_match in category_matches:
+                      category = category_match[0].strip()
+                      description = category_match[2].strip()
+                      external_ticket = ""
+                      if self.config['debug']:
+                        print(f"category: {category}, description: {description} content: {category_match}")
 
-                        if category not in data[entity_header]:
-                            data[entity_header][category] = []
-                            print(f"Created: {category} for {entity_header}")
+                      is_header = re.findall(r'^-+$', category)
+                      if is_header:
+                          if self.config['debug']:
+                            print(f"Header found {category}")
+                          continue
+                      link_regex = r'\[(.*?)\]'
+                      item = {}
+                      for match in category_match:
+                          if re.search(link_regex, match):
+                              if self.config['debug']:
+                                print("match: ", match)
 
-                        item = {"status": category, "external_ticket": jira_ticket, "description": description}
-                        data[entity_header][category].append(item)
-        
-        print(data)
-        return data, self.config
+                              link_match = re.search(link_regex, match)
+                              print(link_match, description)
+                              if link_match:
+                                  if self.config['debug']:
+                                      print("link found: ", link_match.group(1))
+                                  description = link_match.group(1).strip()
+                                  external_ticket = link_match.group(1).strip()
+                                  item = {
+                                    "external_ticket": external_ticket,
+                                    "description": description
+                                  }
+
+
+
+                              # Dynamically extract ops-2 and ops-2-ref values from the description
+                              for field in re.findall(r'(\w+)-ref', description):
+                                  field_value = re.findall(rf'{field}:(\S+)', description)
+                                  if field_value:
+                                      item[field] = field_value[0]
+
+                              if category not in data[entity_header]:
+                                  data[entity_header][category] = []
+
+                              data[entity_header][category].append(item)
+
+      return data, self.config
+
+
+
+
     
     def kebob(self, text):
         return text.lower().replace(" ", "-")
@@ -325,32 +367,48 @@ class MeetDown:
             return f"[{external_ticket}][{ref}]"
         return ""
 
+
     def createInternalReferenceLink(self, item):
         external_ticket = item["external_ticket"]
         if external_ticket:
             ref = self.kebob(external_ticket + "-ref")
-            return f"[{ref}]: {self.config['external']['url']}{external_ticket}\n"
+            return f"[{ref}]: {self.config['external']['url']}{external_ticket}"
         return ""
 
 
-    def write(self,filename, buhbye=False):
+
+    def write(self, filename, buhbye=False):
         with open(filename, "w") as file:
             interval = 0
             for entity, data in self.md_data.items():
-                new_line = "\n\n" if 1 > 0 else ""
+                new_line = "" if interval > 0 else ""
                 file.write(f"{new_line}## {entity}\n")
                 file.write(f"| Category | {self.external().capitalize()} Ticket | Description |\n")
                 file.write("|----------|-------------|-------------|\n")
                 no_items = True
                 for category, items in data.items():
                     for item in items:
-                        print(f"item: {item}")
                         no_items = False
-                        external_ticket = self.toInternalLink(item)#self.toMarkdownExternalURL( item["external_ticket"]) if item["external_ticket"] else ""
+                        external_ticket = self.toInternalLink(item) if item.get("external_ticket") else ""
                         file.write(f"| {category.capitalize()} | {external_ticket} | {item['description']} |\n")
+
+                interval += 1
+
+            if buhbye:
+                file.write("\n\n##### Page References\n\n")
+                for entity, data in self.md_data.items():
+                    for category, items in data.items():
+                        for item in items:
+                            external_ticket = item.get("external_ticket")
+                            if external_ticket:
+                                ref = self.kebob(external_ticket + "-ref")
+                                file.write(f"[{ref}]: {self.config['external']['url']}{external_ticket}\n")
+
         if buhbye:
-          print(f"\n💾:\nmd_data:{self.md_data}\nself.config:{self.config}\n")        
-          print(f"\nkthx👋\n")
+            print(f"\nkthx👋")
+        print(f"\n💾: {os.getcwd()}/{self.config['tmp']}\n")
+
+
 
     def ensure_default_ctx_items_exist_in_md_data(self):
         for record in self.config['status-types']:
@@ -398,7 +456,7 @@ class MeetDown:
         self.ensure_default_ctx_items_exist_in_md_data()
         while True:
             # Ensure each entity has each ctx and same keys with an empty array and optionally items in each array
-            self.ensure_default_ctx_items_exist_in_md_data()
+            
             os.system('clear')
 
             print(f"{NAME}")
@@ -409,6 +467,7 @@ class MeetDown:
 
             # Options
             print(f"{self.config['separator-1']}\n\nOptions:\n\n{self.generate_options()}\n") 
+            self.ensure_default_ctx_items_exist_in_md_data()
             selected_option = input(f"{self.config['prompt-main']}: ")
             
             # If user hits return with no input, kbai
@@ -420,7 +479,7 @@ class MeetDown:
             try:
                 selected_option = int(selected_option)
             except ValueError:
-                print("Invalid option. Please try again.")
+                print(f"\n{self.config['error-invalid-option']}\n")
                 continue
             
             ctx_length = len(self.config['ctx'])
@@ -459,7 +518,8 @@ class MeetDown:
             load_previous = input(f"Previous session detected. {self.config['tmp']}\nLoad it? (y/n): ").lower() == 'y'
             if load_previous:
                 loaded_data, config = self.load_from_markdown(self.config['tmp'])  
-                print(f'loaded_data: {loaded_data} config: {config}')
+                if self.config['debug']:
+                  print(f'loaded_data: {loaded_data} config: {config}')
                 # Load the data from the specified file
                 if loaded_data is not None and config is not None:
                     self.md_data = loaded_data
