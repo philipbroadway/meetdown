@@ -1,3 +1,4 @@
 panflute
 bs4
 redis
+pytest

@@ -13,7 +13,6 @@ import panflute as pf
 from bs4 import BeautifulSoup
 import re
 import redis
-import time
 
 class MeetDown:
     @staticmethod
@@ -64,24 +63,11 @@ class MeetDown:
         redis_password = os.environ.get('REDIS_PASSWORD')
         self.redis_client = redis.Redis(host=redis_host, port=redis_port, password=redis_password)
 
-    def addKey(self,key):
-        self.md_data[key] = {}
-        for ctx in self.config['ctx']:
-            self.md_data[key][list(ctx.keys())[0]] = []
-            self.ensure_default_ctx_items_exist_in_md_data()
-
     def itemTypes(self):
-        # print(f"itemTypes: {self.md_data}")
-        for key in self.md_data:
-          if  key not in self.config['ctx']:
-            self.addKey(key)
-            
-
         types = []
         for obj in self.config['ctx']:
             for key in obj:
                 types.append(key)
-        print(f"itemTypes after: {self.md_data}")
         return types
 
     def generate_options(self):
@@ -167,45 +153,44 @@ class MeetDown:
         self.md_data[entity][to_category].append(item)
         print(f"Item toggled from {from_category} to {to_category}.")
 
-    def add(self, md_data):
-      # Get the list of all types of items
-      item_types = self.itemTypes()
-      print(f"md_data:{md_data}")
-      item_count = 0
-      # Print all item types and let the user select one
-      items = []
-      print(f"{self.config['separator-2']}\n\n{self.config['prompt-add']}\n")
-      for i, item_type in enumerate(item_types, start=1):
-          for n, entity in enumerate(self.config['status-types'], start=1):
+    def add(self):
+        # Get the list of all types of items
+        item_types = self.itemTypes()
+        item_count = 0
+        # Print all item types and let the user select one
+        items = []
+        print(f"{self.config['separator-2']}\n\n{self.config['prompt-add']}\n")
+        for i, item_type in enumerate(item_types, start=1):
+            for n, entity in enumerate(self.config['status-types'], start=1):
               if item_count <= 1:
-                  items = [{"index": 1, "entity": entity, "item_type": item_type}]
+                items = [{"index": 1, "entity": entity, "item_type": item_type}]
               item_count += 1
               print(f"{item_count}. {entity}-{item_type}")
               items.append({"index": i, "entity": entity, "item_type": item_type})
-      item_count += 1
-      print(f"{item_count}. {self.config['id']}")
-      items.append({"index": i+1, "entity": self.config['id'], "item_type": self.config['id']})
+        item_count += 1
+        print(f"{item_count}. {self.config['id']}")
+        items.append({"index": i+1, "entity": self.config['id'], "item_type": self.config['id']})
+        
+        item_type_index = input(f"\n{self.config['prompt-main']}: ")
+        if item_type_index == '':
+            return
 
-      item_type_index = input(f"\n{self.config['prompt-main']}: ")
-      if item_type_index == '':
-          return
+        item = items[int(item_type_index) - 1]
+        
+        selected_entity = item['entity']
+        selected_item_type = item['item_type']
+        # selected_item_index = item['index']
 
-      item = items[int(item_type_index) - 1]
-
-      selected_entity = item['entity']
-      selected_item_type = item['item_type']
-      # selected_item_index = item['index']
-
-      if selected_entity == self.config['id']:
+        if selected_entity == self.config['id']:
           new_root = input(f"Enter name for {self.config['desc']}: ")
           # Initialize an empty list for each category in config's context
-          md_data[new_root] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}
+          self.md_data[new_root] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}
           self.config['status-types'].append(new_root)
           print(f"➕  '{new_root}'")
 
-      else:
+        else:
           # Ask for the details of the new item
-          is_external = input(f"Is this a {self.external().capitalize()} ticket? (y/n): ").lower()
+          is_external = input(f"Is this a {self.external().capitalize()} ticket? (y/n): ").lower() 
           if is_external == 'y':
               external_ticket = input(f"Enter {self.external().capitalize()} ID (ex: FD-12234): ")
           else:
@@ -213,20 +198,14 @@ class MeetDown:
           description = input(f"Enter {selected_item_type} description: ")
           if description == '':  # if input is empty, return to main menu
               return
-          print(md_data[selected_entity])
-          print(f"before:{md_data[selected_entity]}")
-          # Create a copy of the existing item list for the selected category and entity
-          existing_items = md_data[selected_entity].get(selected_item_type, [])
+
           # Add the new item to the selected category for the selected entity
-          existing_items.append({
+          self.md_data[selected_entity][selected_item_type].append({
               "external_ticket": external_ticket,
               "description": description
           })
-          md_data[selected_entity][selected_item_type] = existing_items
-          print(f"after:{md_data[selected_entity][selected_item_type]}")
-          time.sleep(10)
-          print(f"New {selected_item_type} item added for {selected_entity}.")
 
+          print(f"New {selected_item_type} item added for {selected_entity}.")
 
     def remove(self):
       # Prepare a list of all items, each entity and each entity's category items
@@ -266,14 +245,12 @@ class MeetDown:
       if selected_item['type'] == 'entity':
           # If an entity was selected, remove the entity
           self.md_data.pop(selected_item['entity'])
-          self.md_data = self.md_data
-          
+          print(f"Removed: {self.config['id']} {selected_item['entity']}")
       else:
           # If an item was selected, remove the item from its entity's category
           self.md_data[selected_item['entity']][selected_item['category']].remove(selected_item['item'])
           print(f"Removed: {selected_item['category']} for {selected_item['entity']} - {selected_item['item']['description']}")
-      self.ensure_default_ctx_items_exist_in_md_data()
-      return self.md_data
+
 
     def select_entity(self):
         for i, entity in enumerate(self.config['status-types'], start=1):
@@ -378,8 +355,9 @@ class MeetDown:
 
 
     def load_from_markdown(self, file_path):
-        if not os.path.isfile(file_path.strip()):
-            print(f"Error: No such file or directory: '{file_path.strip()}'")
+        path = str(file_path).strip()
+        if not os.path.isfile(path):
+            print(f"Error: No such file or directory: '{path}'")
             return
 
         with open(file_path, 'r') as file:
@@ -508,7 +486,6 @@ class MeetDown:
 
 
     def ensure_default_ctx_items_exist_in_md_data(self):
-        print('ensure_default_ctx_items_exist_in_md_data')
         for record in self.config['status-types']:
             if record not in self.md_data:
                 self.md_data[record] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}
@@ -552,7 +529,6 @@ class MeetDown:
         self.config['status-types'] = args.entities
         #ensure each entitiy has each ctx with an empty array
         self.ensure_default_ctx_items_exist_in_md_data()
-        
         while True:
             # Ensure each entity has each ctx and same keys with an empty array and optionally items in each array
             
@@ -584,7 +560,7 @@ class MeetDown:
             ctx_length = len(self.config['ctx'])
             if selected_option == 1:
                 # Add ctx item
-                self.add(self.md_data)
+                self.add()
             elif selected_option == 2:
                 # Remove ctx item
                 self.remove()

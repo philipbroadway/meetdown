@@ -1,34 +1,39 @@
 import pytest
-from meetdown import MeetDown
+import os
+from .meetdown import MeetDown
 
 @pytest.fixture
-def meetdown():
+def tmp_file(tmp_path):
+    filename = tmp_path / "test_meetdown.md"
+    yield filename
+    if os.path.exists(filename):
+        os.remove(filename)
+
+def test_save_and_load(tmp_file):
     config = MeetDown.default_config()
-    return MeetDown(config)
+    meetdown = MeetDown(config)
+    meetdown.md_data = {
+        "Entity1": {
+            "Category1": [
+                {"external_ticket": "TICKET1", "description": "Item1"},
+                {"external_ticket": "TICKET2", "description": "Item2"},
+            ]
+        },
+        "Entity2": {
+            "Category2": [
+                {"external_ticket": "TICKET3", "description": "Item3"},
+                {"external_ticket": "TICKET4", "description": "Item4"},
+            ]
+        }
+    }
 
-def test_generate_options(meetdown):
-    # Test the generate_options() method
-    expected_options = "1. Add\n2. Remove\n3. Toggle\n4. Load\n5. Save & Quit"
-    options = meetdown.generate_options()
-    assert options == expected_options
+    meetdown.write(tmp_file)
 
-def test_itemTypes(meetdown):
-    # Test the itemTypes() method
-    expected_types = ["⬜", "✅"]
-    types = meetdown.itemTypes()
-    assert types == expected_types
+    # Create a new instance of MeetDown and load the data from the file
+    new_meetdown = MeetDown(config)
+    new_meetdown.load_from_markdown(tmp_file)
 
-def test_add(meetdown):
-    # Test the add() method
-    meetdown.add()
-    # Add assertions to verify the expected changes in meetdown.md_data
-
-def test_remove(meetdown):
-    # Test the remove() method
-    meetdown.remove()
-    # Add assertions to verify the expected changes in meetdown.md_data
-
-def test_toggle(meetdown):
-    # Test the toggle() method
-    meetdown.toggle()
-    # Add assertions to verify the expected changes in meetdown.md_data
+    # Verify the loaded data matches the original data
+    print(f"new_meetdown.md_data: {new_meetdown.md_data.items()}")
+    print(f"meetdown.md_data: {meetdown.md_data.items()}")
+    assert new_meetdown.md_data.items() == meetdown.md_data.items()
