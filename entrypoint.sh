@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-python -i md.py --title meeting --entities $(whoami) --out /meetdown
+python -i meetdown.py --title meeting --entities $(whoami) --out /meetdown

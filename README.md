@@ -7,7 +7,14 @@
 
 ## Prerequisites
 
-* Python 3.6+
+* Python 3 >= 3.6
+* requests
+* python-dotenv
+* beautifulsoup4
+* unitest
+* panflute
+--or--
+* Docker
 
 ## Getting Started
 
@@ -22,7 +29,7 @@ chmod +x /path/to/md.py
 
 Quickstart:
 ```bash
-docker build -t md . && docker run -it md
+docker-compose run meetdown
 
 ```
 

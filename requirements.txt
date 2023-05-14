@@ -1,4 +1,4 @@
-requests
-python-dotenv
-markdown
-beautifulsoup4
+panflute
+bs4
+redis
+pytest
