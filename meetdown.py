@@ -314,6 +314,24 @@ class MeetDown:
         
         print(data)
         return data, self.config
+    
+    def kebob(self, text):
+        return text.lower().replace(" ", "-")
+    
+    def toInternalLink(self, item):
+        external_ticket = item["external_ticket"]
+        if external_ticket:
+            ref = self.kebob(external_ticket + "-ref")
+            return f"[{external_ticket}][{ref}]"
+        return ""
+
+    def createInternalReferenceLink(self, item):
+        external_ticket = item["external_ticket"]
+        if external_ticket:
+            ref = self.kebob(external_ticket + "-ref")
+            return f"[{ref}]: {self.config['external']['url']}{external_ticket}\n"
+        return ""
+
 
     def write(self,filename, buhbye=False):
         with open(filename, "w") as file:
@@ -328,18 +346,50 @@ class MeetDown:
                     for item in items:
                         print(f"item: {item}")
                         no_items = False
-                        external_ticket = self.toMarkdownExternalURL( item["external_ticket"]) if item["external_ticket"] else ""
+                        external_ticket = self.toInternalLink(item)#self.toMarkdownExternalURL( item["external_ticket"]) if item["external_ticket"] else ""
                         file.write(f"| {category.capitalize()} | {external_ticket} | {item['description']} |\n")
         if buhbye:
           print(f"\n💾:\nmd_data:{self.md_data}\nself.config:{self.config}\n")        
           print(f"\nkthx👋\n")
 
     def ensure_default_ctx_items_exist_in_md_data(self):
-      for record in self.md_data:
-        for ctx in self.config['ctx']:
-            category = list(ctx.keys())[0]
-            if category not in self.md_data[record]:
-                self.md_data[record][category] = []
+        for record in self.config['status-types']:
+            if record not in self.md_data:
+                self.md_data[record] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}
+
+
+    def preview(self, md_data):
+        result = []
+        interval = 0
+        refs = []
+        for entity, data in md_data.items():
+            new_line = "" if interval > 0 else ""
+            result.append(f"{new_line}## {entity}")
+            result.append(f"| Category | {self.external().capitalize()} Ticket | Description |")
+            result.append("|----------|-------------|-------------|")
+            no_items = True
+            for category, items in data.items():
+                  for item in items:
+                      no_items = False
+                      if item.get("external_ticket"):
+                        refs.append(self.createInternalReferenceLink(item))
+                        external_ticket = self.toInternalLink(item)
+                        result.append(f"| {category} | {external_ticket} | {item['description']} |")
+                      else:
+                        result.append(f"| {category} |  | {item['description']} |")
+            
+            interval += 1
+        if len(refs) > 0:
+            result.append("")
+            result.append("")
+            result.append("##### Page References")
+            result.append("")
+            result.append("")
+            for ref in refs:
+                result.append(ref)
+        result.append("")
+        result.append("")
+        return result
 
     def meetdown(self, args, config, md_data):
         self.md_data = md_data#{entity: {list(ctx.keys())[0]: [] for ctx in self.config['ctx']} for entity in args.entities}
@@ -347,23 +397,17 @@ class MeetDown:
         #ensure each entitiy has each ctx with an empty array
         self.ensure_default_ctx_items_exist_in_md_data()
         while True:
+            # Ensure each entity has each ctx and same keys with an empty array and optionally items in each array
             self.ensure_default_ctx_items_exist_in_md_data()
             os.system('clear')
+
             print(f"{NAME}")
             # Preview
-            for entity, data in self.md_data.items():
-                print(f"\n## {entity}\n")
-                print(f"| Status | {self.external().capitalize()} | Description |")
-                print("|----------|-------------|-------------|")
-                no_items = True
-                for category, items in data.items():
-                    for item in items:
-                        no_items = False
-                        external_ticket = self.toMarkdownExternalURL( item["external_ticket"]) if item["external_ticket"] else ""
-                        print(f"| {category.capitalize()} | {external_ticket} | {item['description']} |")
-                if no_items:
-                    print("| - | - | - |")
+            previews = self.preview(self.md_data)
+            for preview in previews:
+                print(preview)
 
+            # Options
             print(f"{self.config['separator-1']}\n\nOptions:\n\n{self.generate_options()}\n") 
             selected_option = input(f"{self.config['prompt-main']}: ")
             
