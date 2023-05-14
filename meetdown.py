@@ -11,6 +11,8 @@ import datetime
 import re
 import panflute as pf
 from bs4 import BeautifulSoup
+import re
+import redis
 
 class MeetDown:
     @staticmethod
@@ -56,6 +58,10 @@ class MeetDown:
     def __init__(self, config):
         self.config = config
         self.md_data = {}
+        redis_host = os.environ.get('REDIS_HOST')
+        redis_port = os.environ.get('REDIS_PORT')
+        redis_password = os.environ.get('REDIS_PASSWORD')
+        self.redis_client = redis.Redis(host=redis_host, port=redis_port, password=redis_password)
 
     def itemTypes(self):
         types = []
@@ -282,8 +288,71 @@ class MeetDown:
                 file.write("\n\n")
                 interval += 1
         print(f"\n💾:\n{save_location}\n")
-      
-    import re
+
+    def save_to_redis(self):
+        # Prompt user for Redis folder and filename
+        folder_name = input("Enter Redis folder name: ")
+        filename = input("Enter filename: ")
+
+        # Save the Markdown data to Redis
+        key = f"{folder_name}:{filename}"
+        self.redis_client.set(key, self.md_data)
+
+        print(f"Markdown data saved to Redis: {key}")
+
+    def browse_redis(self):
+        # Print the available Redis folders
+        folders = self.redis_client.keys(pattern="*:*")
+        folders = [folder.decode("utf-8").split(":")[0] for folder in folders]
+        folders = sorted(set(folders))
+
+        print("Available Redis folders:")
+        for i, folder in enumerate(folders, start=1):
+            print(f"{i}. {folder}")
+
+        # Prompt user to select a folder
+        folder_index = input("Enter the number of the folder to browse: ")
+        if not folder_index:
+            return
+
+        folder_index = int(folder_index) - 1
+
+        if folder_index < 0 or folder_index >= len(folders):
+            print("Invalid folder index.")
+            return
+
+        selected_folder = folders[folder_index]
+
+        # List the keys in the selected folder
+        keys = self.redis_client.keys(pattern=f"{selected_folder}:*")
+
+        print(f"\nKeys in folder '{selected_folder}':")
+        for i, key in enumerate(keys, start=1):
+            print(f"{i}. {key.decode('utf-8')}")
+
+        # Prompt user to select a key
+        key_index = input("Enter the number of the key to view: ")
+        if not key_index:
+            return
+
+        key_index = int(key_index) - 1
+
+        if key_index < 0 or key_index >= len(keys):
+            print("Invalid key index.")
+            return
+
+        selected_key = keys[key_index].decode("utf-8")
+
+        # Retrieve the Markdown data from Redis
+        markdown_data = self.redis_client.get(selected_key)
+
+        if markdown_data:
+            self.md_data = markdown_data.decode("utf-8")
+            print(f"\nMarkdown data for key '{selected_key}':\n")
+            print(self.md_data)
+        else:
+            print("Markdown data not found.")
+
 
     def load_from_markdown(self, file_path):
         if not os.path.isfile(file_path.strip()):
@@ -320,8 +389,9 @@ class MeetDown:
                                 print(f"Header found {category}")
                             continue
                         link_regex = r'\[(.*?)\]'
-                        item = {}
+                        
                         for match in category_match:
+                            item = {"description": "", "external_ticket": ""}
                             if re.search(link_regex, match):
                                 if self.config['debug']:
                                     print("match: ", match)
@@ -331,6 +401,7 @@ class MeetDown:
                                 if link_match:
                                     if self.config['debug']:
                                         print("link found: ", link_match.group(1))
+                                    print(f"desc?? found: {link_match.group(1)} {match}")
                                     description = link_match.group(1).strip()
                                     external_ticket = link_match.group(1).strip()
 
@@ -338,7 +409,8 @@ class MeetDown:
 
                                     item = {
                                         "external_ticket": external_ticket,
-                                        "description": description
+                                        "description": category_match[2]
+
                                     }
 
                                     if category not in data[entity_header]:
@@ -349,12 +421,12 @@ class MeetDown:
         for ref in page_refs:
             pattern = re.escape(f"[{ref}]:") + r'\s*(.*?)\s*$'
             url_match = re.search(pattern, content, re.MULTILINE)
-            print(f"pattern: {pattern}")
-            print(f"url_match: {url_match}")
             if url_match:
                 url = url_match.group(1)
                 key = f"{ref.replace('-ref', '')}"
                 replaced = url.replace(f"{key}", "")
+                print(f"replacing {key} with {replaced}")
+                print(f"replacing {url} with {replaced}")
                 self.config['external']['url'] = replaced
 
         return data, self.config
@@ -437,15 +509,15 @@ class MeetDown:
                         result.append(f"| {category} | {external_ticket} | {item['description']} |")
                       else:
                         result.append(f"| {category} |  | {item['description']} |")
-            
+            result.append("")
             interval += 1
         if len(refs) > 0:
             result.append("")
             result.append("")
-            result.append("##### Page References")
             result.append("")
-            result.append("")
-            for ref in refs:
+            # remove duplicates
+            uniq_refs = list(set(refs))
+            for ref in uniq_refs:
                 result.append(ref)
         result.append("")
         result.append("")
