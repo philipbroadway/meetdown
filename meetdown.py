@@ -311,7 +311,7 @@ class MeetDown:
 
                         item = {"status": category, "external_ticket": jira_ticket, "description": description}
                         data[entity_header][category].append(item)
-                       #print(f"Loaded: {category} for {entity_header} - {description}")
+        
         print(data)
         return data, self.config
 
@@ -344,6 +344,8 @@ class MeetDown:
     def meetdown(self, args, config, md_data):
         self.md_data = md_data#{entity: {list(ctx.keys())[0]: [] for ctx in self.config['ctx']} for entity in args.entities}
         self.config['status-types'] = args.entities
+        #ensure each entitiy has each ctx with an empty array
+        self.ensure_default_ctx_items_exist_in_md_data()
         while True:
             self.ensure_default_ctx_items_exist_in_md_data()
             os.system('clear')
@@ -362,11 +364,10 @@ class MeetDown:
                 if no_items:
                     print("| - | - | - |")
 
-            # Prompt user for an option
             print(f"{self.config['separator-1']}\n\nOptions:\n\n{self.generate_options()}\n") 
             selected_option = input(f"{self.config['prompt-main']}: ")
             
-            # If user hits return with no input, write the temporary file and exit
+            # If user hits return with no input, kbai
             if not selected_option:
                 self.ensure_default_ctx_items_exist_in_md_data()
                 self.write(self.config['tmp'], True)

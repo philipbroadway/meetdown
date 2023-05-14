@@ -1,8 +1,5 @@
 requests
 python-dotenv
-markdown
 beautifulsoup4
-pypandoc
-panflute
-pandoc
 unitest
+panflute
