@@ -157,6 +157,8 @@ class MeetDown:
         # Get the list of all types of items
         item_types = self.itemTypes()
         item_count = 0
+        print(F"item_types:{item_types}")
+        print(F"status_types:{self.config['status-types']}")
         # Print all item types and let the user select one
         items = []
         print(f"{self.config['separator-2']}\n\n{self.config['prompt-add']}\n")
@@ -245,6 +247,7 @@ class MeetDown:
       if selected_item['type'] == 'entity':
           # If an entity was selected, remove the entity
           self.md_data.pop(selected_item['entity'])
+          self.config['status-types'].remove(selected_item['entity'])
           print(f"Removed: {self.config['id']} {selected_item['entity']}")
       else:
           # If an item was selected, remove the item from its entity's category
