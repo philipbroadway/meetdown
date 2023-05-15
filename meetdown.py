@@ -143,15 +143,14 @@ class MeetDown:
         to_category_index = int(to_category_index) - 1
         to_category = list(self.config['ctx'][to_category_index].keys())[0]
 
-        # Now, remove the item from the old category and add it to the new one
-        print(f"Moving item from {from_category} to {to_category}...")
-        print(f"self.md_data[entity]:{self.md_data[entity]}")
-        # if self.md_data[entity] doesnt have to_category add it
+        self.toggle_status(entity, from_category, to_category, item)
+
+    def toggle_status(self, entity, from_category, to_category, item):
         if to_category not in self.md_data[entity]:
           self.md_data[entity][to_category] = []
-        self.md_data[entity][from_category].remove(item)
+        if self.md_data[entity][from_category]:
+          self.md_data[entity][from_category].remove(item)
         self.md_data[entity][to_category].append(item)
-        print(f"Item toggled from {from_category} to {to_category}.")
 
     def add(self):
         # Get the list of all types of items
