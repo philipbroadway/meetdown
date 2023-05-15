@@ -11,17 +11,19 @@
 * panflute
 * bs4
 * redis
-* pytest
---or--
+* pytest 
+
+`--or--` 
+
 * Docker
 
 ## Getting Started
 
 ```bash
-python md.py
+python meetdown.py
 #or
-chmod +x /path/to/md.py
-./path/to/md.py
+chmod +x /path/to/meetdown.py
+./path/to/meetdown.py
 ```
 
 ## Docker
