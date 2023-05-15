@@ -23,9 +23,5 @@ jobs:
           python-version: '3.8'
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Pytest Action Step
-        id: pytest
-        uses: paolorechia/fast-pytest-github-action@develop
-        with:
-          pytest_args: 'sample_py/test_success.py'
-          requirements_file: 'test_requirements.txt'
+      - name: GitHub Action for pytest
+        uses: cclauss/GitHub-Action-for-pytest@0.5.0
