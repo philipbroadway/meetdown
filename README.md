@@ -19,17 +19,36 @@
 
 * Docker
 
+
+## Files
+
+```
+meetdown/
+    meetdown/
+        __init__.py
+        meetdown.py
+        docker-compose.yml
+        Dockerfile
+        entrypoint.sh
+        requirements.txt
+    tests/
+        __init__.py
+        test_meetdown_import.py
+        test_meetdown_methods.py
+    .env-example
+```
+
 ## Getting Started
 
 ```bash
-python meetdown.py
+cd markdown && python meetdown.py
 ```
 
 ## Docker
 
 Quickstart:
 ```bash
-docker-compose run meetdown
+cd markdown && docker-compose run meetdown
 
 ```
 
