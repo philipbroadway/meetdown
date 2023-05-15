@@ -24,7 +24,7 @@ jobs:
         with:
           context: .
           push: false
-          tags: meetdown-image
+          tags: meetdown
 
       - name: Run Pytest
-        run: docker run --rm meetdown-image pytest
+        run: docker run --rm meetdown pytest
