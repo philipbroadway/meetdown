@@ -416,14 +416,13 @@ class MeetDown:
                                     item = {
                                         "external_ticket": external_ticket,
                                         "description": category_match[2]
-
                                     }
 
                                     if category not in data[entity_header]:
                                         data[entity_header][category] = []
 
                                     data[entity_header][category].append(item)
-        print("\n\n\n")
+        
         for ref in page_refs:
             pattern = re.escape(f"[{ref}]:") + r'\s*(.*?)\s*$'
             url_match = re.search(pattern, content, re.MULTILINE)
@@ -431,8 +430,6 @@ class MeetDown:
                 url = url_match.group(1)
                 key = f"{ref.replace('-ref', '')}"
                 replaced = url.replace(f"{key}", "")
-                print(f"replacing {key} with {replaced}")
-                print(f"replacing {url} with {replaced}")
                 self.config['external']['url'] = replaced
 
         return data, self.config
@@ -459,37 +456,13 @@ class MeetDown:
 
     def write(self, filename, buhbye=False):
         with open(filename, "w") as file:
-            interval = 0
-            for entity, data in self.md_data.items():
-                if not self.config['status-types'].get(entity):
-                    continue
-                new_line = "" if interval > 0 else ""
-                file.write(f"{new_line}## {entity}\n")
-                file.write(f"| Category | {self.external().capitalize()} Ticket | Description |\n")
-                file.write("|----------|-------------|-------------|\n")
-                no_items = True
-                for category, items in data.items():
-                    for item in items:
-                        no_items = False
-                        external_ticket = self.toInternalLink(item) if item.get("external_ticket") else ""
-                        file.write(f"| {category.capitalize()} | {external_ticket} | {item['description']} |\n")
-
-                interval += 1
-
-            if buhbye:
-                file.write("\n\n##### Page References\n\n")
-                for entity, data in self.md_data.items():
-                    for category, items in data.items():
-                        for item in items:
-                            external_ticket = item.get("external_ticket")
-                            if external_ticket:
-                                ref = self.kebob(external_ticket + "-ref")
-                                file.write(f"[{ref}]: {self.config['external']['url']}{external_ticket}\n")
+            
+            for line in self.preview(self.md_data):
+                file.write(line)
 
         if buhbye:
             print(f"\nkthx👋")
         print(f"\n💾: {os.getcwd()}/{self.config['tmp']}\n")
-
 
 
     def ensure_default_ctx_items_exist_in_md_data(self):
@@ -497,16 +470,15 @@ class MeetDown:
             if record not in self.md_data:
                 self.md_data[record] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}
 
-
     def preview(self, md_data):
         result = []
         interval = 0
         refs = []
         for entity, data in md_data.items():
             new_line = "" if interval > 0 else ""
-            result.append(f"{new_line}## {entity}")
-            result.append(f"| Category | {self.external().capitalize()} Ticket | Description |")
-            result.append("|----------|-------------|-------------|")
+            result.append(f"{new_line}## {entity}\n")
+            result.append(f"| Category | {self.external().capitalize()} Ticket | Description |\n")
+            result.append("|----------|-------------|-------------|\n")
             no_items = True
             for category, items in data.items():
                   for item in items:
@@ -514,21 +486,19 @@ class MeetDown:
                       if item.get("external_ticket"):
                         refs.append(self.createInternalReferenceLink(item))
                         external_ticket = self.toInternalLink(item)
-                        result.append(f"| {category} | {external_ticket} | {item['description']} |")
+                        result.append(f"| {category} | {external_ticket} | {item['description']} |\n")
                       else:
-                        result.append(f"| {category} |  | {item['description']} |")
+                        result.append(f"| {category} |  | {item['description']} |\n")
             result.append("")
             interval += 1
         if len(refs) > 0:
-            result.append("")
-            result.append("")
-            result.append("")
+            result.append("\n\n")
             # remove duplicates
             uniq_refs = list(set(refs))
             for ref in uniq_refs:
-                result.append(ref)
-        result.append("")
-        result.append("")
+                result.append(f"{ref}\n")
+        result.append("\n")
+
         return result
 
     def meetdown(self, args, config, md_data):
@@ -545,7 +515,7 @@ class MeetDown:
             # Preview
             previews = self.preview(self.md_data)
             for preview in previews:
-                print(preview)
+                print(preview.replace("\n",""))## We dont want to show \n only used for written file
 
             # Options
             print(f"{self.config['separator-1']}\n\nOptions:\n\n{self.generate_options()}\n") 

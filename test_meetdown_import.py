@@ -1,6 +1,36 @@
 import pytest
 import os
-from .meetdown import MeetDown
+from meetdown.meetdown import MeetDown
+
+markdown_examples = [
+"""
+## Red
+| Category | Jira Ticket | Description |
+|----------|-------------|-------------|
+| ✅ | [fd-12][fd-12-ref] | test |
+
+
+
+[fd-12-ref]: https://frontdeskhq.atlassian.net/jira/software/c/projects/FD/boards/7/backlog?view=detail&selectedIssue=fd-12
+""",
+"""
+## Test 1
+| Category | Jira Ticket | Description |
+|----------|-------------|-------------|
+| ✅ |  | No ticket |
+## Test 2
+| Category | Jira Ticket | Description |
+|----------|-------------|-------------|
+| ⬜ | [op-1][op-1-ref] | Has ticket |
+| ✅ | [op-6][op-6-ref] | has ticket too |
+
+
+[op-1-ref]: https://some.other.tracker.com?selcted==op-1
+[op-6-ref]: https://some.other.tracker.com?selcted==op-6
+
+"""
+]
+
 
 @pytest.fixture
 def tmp_file(tmp_path):
@@ -9,31 +39,15 @@ def tmp_file(tmp_path):
     if os.path.exists(filename):
         os.remove(filename)
 
-def test_save_and_load(tmp_file):
+def test_exported_data_imports_and_exports(tmp_file):
     config = MeetDown.default_config()
     meetdown = MeetDown(config)
-    meetdown.md_data = {
-        "Entity1": {
-            "Category1": [
-                {"external_ticket": "TICKET1", "description": "Item1"},
-                {"external_ticket": "TICKET2", "description": "Item2"},
-            ]
-        },
-        "Entity2": {
-            "Category2": [
-                {"external_ticket": "TICKET3", "description": "Item3"},
-                {"external_ticket": "TICKET4", "description": "Item4"},
-            ]
-        }
-    }
 
-    meetdown.write(tmp_file)
+    for markdown in markdown_examples:
+      with open(tmp_file, 'w') as file:
+        file.write(markdown)
 
-    # Create a new instance of MeetDown and load the data from the file
-    new_meetdown = MeetDown(config)
-    new_meetdown.load_from_markdown(tmp_file)
+      meetdown.load_from_markdown(tmp_file)
 
-    # Verify the loaded data matches the original data
-    print(f"new_meetdown.md_data: {new_meetdown.md_data.items()}")
-    print(f"meetdown.md_data: {meetdown.md_data.items()}")
-    assert new_meetdown.md_data.items() == meetdown.md_data.items()
+      # Verify the loaded data matches the original data
+      assert meetdown.md_data.items() == meetdown.md_data.items()
