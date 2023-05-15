@@ -6,3 +6,17 @@ services:
     container_name: app
     tty: true
     stdin_open: true
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=REDIS_PASSWORD
+
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+      - 6379:6379
+    environment:
+      - REDIS_PASSWORD=REDIS_PASSWORD
