@@ -33,8 +33,8 @@ docker-compose run meetdown
 
 ```
 
-To open the folder where the markdown documents are kept, you can use the following command:
+## Testing
 
 ```bash
-docker-compose exec meetdown /bin/bash -c "cd /meetdown/ && ls -l"
+pytest
 ```
