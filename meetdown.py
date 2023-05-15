@@ -143,15 +143,27 @@ class MeetDown:
         to_category_index = int(to_category_index) - 1
         to_category = list(self.config['ctx'][to_category_index].keys())[0]
 
-        # Now, remove the item from the old category and add it to the new one
-        print(f"Moving item from {from_category} to {to_category}...")
-        print(f"self.md_data[entity]:{self.md_data[entity]}")
-        # if self.md_data[entity] doesnt have to_category add it
+        self.toggle_status(entity, from_category, to_category, item)
+
+    def toggle_status(self, entity, from_category, to_category, item):
         if to_category not in self.md_data[entity]:
           self.md_data[entity][to_category] = []
-        self.md_data[entity][from_category].remove(item)
+        if self.md_data[entity][from_category]:
+          self.md_data[entity][from_category].remove(item)
         self.md_data[entity][to_category].append(item)
-        print(f"Item toggled from {from_category} to {to_category}.")
+
+    def add_entity(self, entity):
+        self.md_data[entity] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}
+        self.config['status-types'].append(entity)
+        if entity not in self.md_data:
+            self.md_data[entity] = {}
+            for category in self.config['ctx']:
+                self.md_data[entity][list(category.keys())[0]] = []
+
+    def remove_entity(self, entity):
+        if entity in self.md_data:
+          del self.md_data[entity]
+          self.config['status-types'].remove(entity)
 
     def add(self):
         # Get the list of all types of items
@@ -188,8 +200,7 @@ class MeetDown:
         if selected_entity == self.config['id']:
           new_root = input(f"Enter name for {self.config['desc']}: ")
           # Initialize an empty list for each category in config's context
-          self.md_data[new_root] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}
-          self.config['status-types'].append(new_root)
+          self.add_entity(new_root)
           print(f"➕  '{new_root}'")
 
         else:
@@ -204,12 +215,15 @@ class MeetDown:
               return
 
           # Add the new item to the selected category for the selected entity
-          self.md_data[selected_entity][selected_item_type].append({
-              "external_ticket": external_ticket,
-              "description": description
-          })
+          self.add_item(selected_entity, selected_item_type, external_ticket, description)
 
           print(f"New {selected_item_type} item added for {selected_entity}.")
+    
+    def add_item(self, entity, item_type, external_ticket, description):
+        self.md_data[entity][item_type].append({
+            "external_ticket": external_ticket,
+            "description": description
+    })
 
     def remove(self):
       # Prepare a list of all items, each entity and each entity's category items
@@ -247,15 +261,17 @@ class MeetDown:
       selected_item = items[item_index]
 
       if selected_item['type'] == 'entity':
-          # If an entity was selected, remove the entity
-          self.md_data.pop(selected_item['entity'])
-          self.config['status-types'].remove(selected_item['entity'])
-          print(f"Removed: {self.config['id']} {selected_item['entity']}")
+          self.remove_entity(selected_item['entity'])
       else:
           # If an item was selected, remove the item from its entity's category
+          self.remove_item(selected_item['entity'], selected_item['category'], selected_item['index'])
           self.md_data[selected_item['entity']][selected_item['category']].remove(selected_item['item'])
-          print(f"Removed: {selected_item['category']} for {selected_item['entity']} - {selected_item['item']['description']}")
+          
 
+    def remove_item(self, entity, item_type, item_index):
+        if self.md_data[entity][item_type][item_index] == None:
+            return
+        self.md_data[entity][item_type].pop(item_index)
 
     def select_entity(self):
         for i, entity in enumerate(self.config['status-types'], start=1):
