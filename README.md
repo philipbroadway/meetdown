@@ -5,7 +5,7 @@
 ```
 > Markdown editor for meetups
 
-[![Tests](https://github.com/frontdesk/meetdown/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/frontdesk/meetdown/actions/workflows/python-app.yml)
+[![Pytest](https://github.com/frontdesk/meetdown/actions/workflows/pytest.yml/badge.svg?branch=main)](https://github.com/frontdesk/meetdown/actions/workflows/pytest.yml)
 
 ## Prerequisites
 
