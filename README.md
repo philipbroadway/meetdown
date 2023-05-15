@@ -21,9 +21,6 @@
 
 ```bash
 python meetdown.py
-#or
-chmod +x /path/to/meetdown.py
-./path/to/meetdown.py
 ```
 
 ## Docker
