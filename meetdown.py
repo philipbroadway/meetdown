@@ -461,7 +461,7 @@ class MeetDown:
         with open(filename, "w") as file:
             interval = 0
             for entity, data in self.md_data.items():
-                if not self.config['users'].get(entity):
+                if not self.config['status-types'].get(entity):
                     continue
                 new_line = "" if interval > 0 else ""
                 file.write(f"{new_line}## {entity}\n")
