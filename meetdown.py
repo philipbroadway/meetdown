@@ -157,8 +157,6 @@ class MeetDown:
         # Get the list of all types of items
         item_types = self.itemTypes()
         item_count = 0
-        print(F"item_types:{item_types}")
-        print(F"status_types:{self.config['status-types']}")
         # Print all item types and let the user select one
         items = []
         print(f"{self.config['separator-2']}\n\n{self.config['prompt-add']}\n")
@@ -174,8 +172,12 @@ class MeetDown:
         items.append({"index": i+1, "entity": self.config['id'], "item_type": self.config['id']})
         
         item_type_index = input(f"\n{self.config['prompt-main']}: ")
-        if item_type_index == '':
+        if item_type_index == '' or  item_type_index.isdigit() == False:
             return
+        
+        if int(item_type_index) > len(items):
+          print(f"Please select a number between 1 and {len(items)}")
+          return
 
         item = items[int(item_type_index) - 1]
         
@@ -238,8 +240,8 @@ class MeetDown:
 
       # Ask the user to select an item or entity to remove
       item_index = input("Enter the number of the item to remove: ")
-      if item_index == '':  # if input is empty, return to main menu
-          return
+      if item_index == '' or  item_index.isdigit() == False:
+            return
 
       item_index = int(item_index) - 1
       selected_item = items[item_index]
@@ -459,6 +461,8 @@ class MeetDown:
         with open(filename, "w") as file:
             interval = 0
             for entity, data in self.md_data.items():
+                if not self.config['users'].get(entity):
+                    continue
                 new_line = "" if interval > 0 else ""
                 file.write(f"{new_line}## {entity}\n")
                 file.write(f"| Category | {self.external().capitalize()} Ticket | Description |\n")
