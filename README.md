@@ -19,22 +19,41 @@
 
 * Docker
 
+
+## Files
+
+```
+meetdown/
+    meetdown/
+        __init__.py
+        meetdown.py
+        docker-compose.yml
+        Dockerfile
+        entrypoint.sh
+        requirements.txt
+    tests/
+        __init__.py
+        test_meetdown_import.py
+        test_meetdown_methods.py
+    .env-example
+```
+
 ## Getting Started
 
 ```bash
-python meetdown.py
+cd markdown && python meetdown.py
 ```
 
 ## Docker
 
 Quickstart:
 ```bash
-docker-compose run meetdown
+cd markdown && docker-compose run meetdown
 
 ```
 
-To open the folder where the markdown documents are kept, you can use the following command:
+## Testing
 
 ```bash
-docker-compose exec meetdown /bin/bash -c "cd /meetdown/ && ls -l"
+pytest
 ```

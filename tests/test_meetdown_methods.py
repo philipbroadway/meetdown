@@ -1,20 +1,30 @@
 import pytest
-from meetdown.meetdown import MeetDown
+
+from meetdown import MeetDown
 
 @pytest.fixture
 def meetdown():
     config = MeetDown.default_config()
     return MeetDown(config)
 
-def test_preview_returns_list_of_strings(meetdown):
-    md_data = {
+
+@pytest.fixture
+def single_entity_single_item_with_external():
+    return {
         "Entity 1": {
             "Category 1": [
                 {"external_ticket": "FD-123", "description": "Description 1"}
             ]
         }
     }
-    result = meetdown.preview(md_data)
+
+@pytest.fixture
+def category(root, category="Category 1"):
+    root[category] = []
+    return root
+
+def test_preview_returns_list_of_strings(meetdown):
+    result = meetdown.preview(single_entity_single_item_with_external())
     assert isinstance(result, list)
     assert all(isinstance(item, str) for item in result)
 
