@@ -3,3 +3,5 @@ bs4
 redis
 pytest
 panflute
+pytest-emoji
+pytest-md
