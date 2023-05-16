@@ -19,25 +19,6 @@
 
 * Docker
 
-
-## Files
-
-```
-meetdown/
-    meetdown/
-        __init__.py
-        meetdown.py
-        docker-compose.yml
-        Dockerfile
-        entrypoint.sh
-        requirements.txt
-    tests/
-        __init__.py
-        test_meetdown_import.py
-        test_meetdown_methods.py
-    .env-example
-```
-
 ## Getting Started
 
 ```bash
