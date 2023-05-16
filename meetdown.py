@@ -43,7 +43,7 @@ class MeetDown:
                 {"✅":  "✅ done"},
                 # mojii: https://emojidb.org
             ],
-            "debug": 0,
+            "debug": 1,
             "tmpl": [
                 {id: "⛔", "desc": "Invalid"}
             ],
@@ -52,6 +52,7 @@ class MeetDown:
             "separator-2": "______________",
             "table-header": "| ID  | $external_id | Description |",
             "table-header-divider": "----------",
+            
         }
         res["table-separator"] = f"| {res['table-header-divider']} | {res['table-header-divider']} |"
         return res
@@ -64,7 +65,7 @@ class MeetDown:
         redis_password = os.environ.get('REDIS_PASSWORD')
         self.redis_client = redis.Redis(host=redis_host, port=redis_port, password=redis_password)
 
-    def itemTypes(self):
+    def status_types(self):
         types = []
         for obj in self.config['ctx']:
             for key in obj:
@@ -164,17 +165,19 @@ class MeetDown:
     def remove_entity(self, entity):
         if entity in self.md_data:
           del self.md_data[entity]
-          self.config['status-types'].remove(entity)
+          #self.config['status-types'].remove(entity)
 
     def add(self):
         # Get the list of all types of items
-        item_types = self.itemTypes()
+        item_types = self.status_types()
         item_count = 0
         # Print all item types and let the user select one
         items = []
         print(f"{self.config['separator-2']}\n\n{self.config['prompt-add']}\n")
+        
         for i, item_type in enumerate(item_types, start=1):
-            for n, entity in enumerate(self.config['status-types'], start=1):
+            for n, entity in enumerate(self.md_data, start=1):
+              # print(f"{n}. {entity}-{item_type}")
               if item_count <= 1:
                 items = [{"index": 1, "entity": entity, "item_type": item_type}]
               item_count += 1
@@ -242,7 +245,7 @@ class MeetDown:
 
           # Append each entity's category items to the list
           for category, category_items in data.items():
-              for item in category_items:
+              for category_index, item in enumerate(category_items):
                   item_count += 1
                   print(f"{item_count}. {category} for {entity} - {item['description']}")
                   items.append({
@@ -250,24 +253,22 @@ class MeetDown:
                       "entity": entity,
                       "category": category,
                       "item": item,
-                      "type": "item"
+                      "type": "item",
+                      "category_index": category_index
                   })
 
       # Ask the user to select an item or entity to remove
       item_index = input("Enter the number of the item to remove: ")
       if item_index == '' or  item_index.isdigit() == False:
-            return
-
+          return
+      print(f"data: {self.md_data}")
       item_index = int(item_index) - 1
       selected_item = items[item_index]
 
       if selected_item['type'] == 'entity':
           self.remove_entity(selected_item['entity'])
       else:
-          # If an item was selected, remove the item from its entity's category
-          self.remove_item(selected_item['entity'], selected_item['category'], selected_item['index'])
-          self.md_data[selected_item['entity']][selected_item['category']].remove(selected_item['item'])
-          
+          self.remove_item(selected_item['entity'], selected_item['category'], selected_item['category_index'])
 
     def remove_item(self, entity, item_type, item_index):
         if self.md_data[entity][item_type][item_index] == None:
@@ -377,7 +378,13 @@ class MeetDown:
 
     def load_from_markdown(self, file_path):
         parser = MeetDownParser(self.config)
-        return parser.load_from_markdown(file_path)
+        d = {}
+        c = {}
+        d, c = parser.load_from_markdown(file_path)
+        self.config = c
+        self.md_data = d
+
+        return d, c
     def update_data_item_categories(self, data, category):
         # print(f"\n-------before: {data}------")
         keys = [category]

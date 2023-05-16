@@ -41,6 +41,25 @@ class MeetDownParser:
     def __init__(self, config):
         self.config = config
 
+    def setup_defaults(self, data, config):
+        keys = []
+        for entity in data.keys():
+            for key in data[entity].keys():
+                keys.append(key)
+        
+        for item in config['ctx']:
+            for key in item.keys():
+                keys.append(key)
+        keys = list(set(keys))
+
+        for entity in data.keys():
+            for key in keys:
+                if key not in data[entity].keys():
+                    data[entity][key] = []
+        print(f"setup_defaults: {data}")
+        return data, config
+
+
     def load_from_markdown(self, file_path):
         path = str(file_path).strip()
         if not os.path.isfile(path):
@@ -51,8 +70,10 @@ class MeetDownParser:
         entity_headers = self.extract_entity_headers(content)
         data, page_refs = self.parse_entity_headers(entity_headers, content)
         self.update_config_with_external_url(page_refs, content)
-
-        return data, self.config
+        data, config = self.setup_defaults(data, self.config)
+        # print(f"Loaded {len(data)} entities from '{path}' data: {data} config: {self.config}")
+        
+        return data, config
 
 
     def read_file_content(self, file_path):
