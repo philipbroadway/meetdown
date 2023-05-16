@@ -78,7 +78,7 @@ class MeetDownParser:
         content = self.read_file_content(file_path)
         entity_headers = self.extract_entity_headers(content)
         data, page_refs = self.parse_entity_headers(entity_headers, content)
-        self.update_config_with_external_url(page_refs, content)
+        self.update_config_with_external_url(page_refs, content, data)
         data, config = self.setup_defaults(data, self.config)
         # print(f"Loaded {len(data)} entities from '{path}' data: {data} config: {self.config}")
         
@@ -147,12 +147,26 @@ class MeetDownParser:
         if category not in data:
             data[category] = []
 
-    def update_config_with_external_url(self, page_refs, content):
+    def distinct_external_tickets(self, data):
+        tickets = []
+        for entity in data.keys():
+            for category in data[entity].keys():
+                for item in data[entity][category]:
+                    if item['external_ticket'] not in tickets:
+                        tickets.append(item['external_ticket'])
+        return tickets
+
+    def update_config_with_external_url(self, page_refs, content, data):
         for ref in page_refs:
             pattern = re.escape(f"[{ref}]:") + r'\s*(.*?)\s*$'
             url_match = re.search(pattern, content, re.MULTILINE)
             if url_match:
                 url = url_match.group(1)
+                external_ids = self.distinct_external_tickets(data)
+                for id in external_ids:
+                    url = url.replace(f"{id}", "")
+                    url = url.replace(f"{id.upper()}", "")
+                    url = url.replace(f"{id.lower()}", "")
                 key = f"{ref.replace('-ref', '')}"
                 replaced = url.replace(f"{key}", "")
                 self.config['external']['url'] = replaced
