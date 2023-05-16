@@ -201,29 +201,25 @@ class MeetDown:
         
         for i, item_type in enumerate(item_types, start=1):
             for n, entity in enumerate(self.md_data, start=1):
-              # print(f"{n}. {entity}-{item_type}")
-              if item_count <= 1:
-                items = [{"index": 1, "entity": entity, "item_type": item_type}]
               item_count += 1
               print(f"{item_count}. {entity}-{item_type}")
-              items.append({"index": i, "entity": entity, "item_type": item_type})
+              items.append({"index": item_count, "entity": entity, "item_type": item_type})
         item_count += 1
         print(f"{item_count}. {self.config['id']}")
-        items.append({"index": i+1, "entity": self.config['id'], "item_type": self.config['id']})
+        items.append({"index": item_count+1, "entity": self.config['id'], "item_type": self.config['id']})
         
         item_type_index = input(f"\n{self.config['prompt-main']}: ")
         if item_type_index == '' or  item_type_index.isdigit() == False:
             return
         
-        if int(item_type_index) > len(items):
+        if int(item_type_index) -1 > len(items):
           print(f"Please select a number between 1 and {len(items)}")
           return
 
-        item = items[int(item_type_index) - 1]
+        item = items[int(item_type_index) -1]
         
         selected_entity = item['entity']
         selected_item_type = item['item_type']
-        # selected_item_index = item['index']
 
         if selected_entity == self.config['id']:
           new_root = input(f"Enter name for {self.config['desc']}: ")
