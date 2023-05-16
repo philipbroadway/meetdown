@@ -2,3 +2,4 @@
 .env
 .pytest*
 .meetdown*
+__pycache__*
