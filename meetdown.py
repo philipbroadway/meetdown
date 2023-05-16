@@ -43,7 +43,7 @@ class MeetDown:
                 {"✅":  "✅ done"},
                 # mojii: https://emojidb.org
             ],
-            "debug": 1,
+            "debug": 0,
             "tmpl": [
                 {id: "⛔", "desc": "Invalid"}
             ],

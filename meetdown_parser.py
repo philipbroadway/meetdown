@@ -6,7 +6,7 @@ class MeetDownParser:
       A parser to load and process markdown content from a given file path, expecting a specific format:
       
       Input Format:
-      -------------
+      -------------------------
       ## Entity Header
       | Category | External Ticket | Description |
       |----------|-----------------|-------------|
@@ -15,14 +15,23 @@ class MeetDownParser:
       
       [ticket_id-ref]: https://ticketing_system.com/ticket/ticket_id
 
+      -------------------------
+
       The input format should consist of entity headers preceded by '##', followed by a table with three columns:
       - Category: The category of the item (e.g. '✅', '⬜', etc.).
       - External Ticket: The ticket ID from an external ticketing system (e.g. Jira, Trello, etc.) enclosed in square brackets.
       - Description: The description of the item.
-      
-      If there items with external tickets, at the end of the markdown file, there should be a list of markdown reference links to the external ticketing system URLs.
 
-      Generated Data Structure:
+      An enity header & data table should be present for every entity in the markdown file (aka each person in the meeting)
+
+      External links:
+      - External tracking urls are supported by adding a reference link at the bottom of the markdown file using the following convention:
+        - Given a ticket ID of 'foo123' and a ticketing system view ticket URL of 'https://some.tracker.com/?issue=':
+          - The row in the data table should contain '[foo123][foo123-ref]'
+          - The markdown file should contain '[foo123-ref]: https://some.tracker.com/?issue=foo123' at bottom listed with other external links
+      - [TODO:] Supports multiple tickets but currently only supports one ticketing system URL
+
+      Output:
       -------------------------
       {
           "Entity Header": {
@@ -74,7 +83,6 @@ class MeetDownParser:
         # print(f"Loaded {len(data)} entities from '{path}' data: {data} config: {self.config}")
         
         return data, config
-
 
     def read_file_content(self, file_path):
         with open(file_path, 'r') as file:
@@ -134,8 +142,6 @@ class MeetDownParser:
                     item["external_ticket"] = external_ticket
 
         return page_refs
-
-
 
     def update_data_item_categories(self, data, category):
         if category not in data:
