@@ -21,37 +21,37 @@ class MeetDown:
         
         res = {
             "users": getpass.getuser(),
-          "title": f".meetdown.md",
-          "folder": f"{os.getcwd()}",
-          "tmp": ".meetdown.md",
-          "id": "👤",
-          "desc": "👤 person",
-          "prompt-type": "Option",
-          "prompt-main": "Enter number",
-          "prompt-add": "Add",
-          "prompt-remove": "Remove",
-          "prompt-toggle": "Toggle",
-          "prompt-load": "Load",
-          "prompt-save": "Save & Quit",
-          "prompt-save-location": "Enter the path of the Markdown file to load",
-          "external": {
-              "id": "jira",
-              "url": "https://frontdeskhq.atlassian.net/jira/software/c/projects/FD/boards/7/backlog?view=detail&selectedIssue="
-          },
-          "ctx": [
-              {"⬜":  "⬜ todo"},
-              {"✅":  "✅ done"},
-              # mojii: https://emojidb.org
-          ],
-          "debug": 1,
-          "tmpl": [
-              {id: "⛔", "desc": "Invalid"}
-          ],
-          "status-types-selections-invalid": "⛔ Invalid selection.",
-          "separator-1": "________________________",
-          "separator-2": "______________",
-          "table-header": "| ID  | $external_id | Description |",
-          "table-header-divider": "----------",
+            "title": f".meetdown.md",
+            "folder": f"{os.getcwd()}",
+            "tmp": ".meetdown.md",
+            "id": "👤",
+            "desc": "👤 person",
+            "prompt-type": "Option",
+            "prompt-main": "Enter number",
+            "prompt-add": "Add",
+            "prompt-remove": "Remove",
+            "prompt-toggle": "Toggle",
+            "prompt-load": "Load",
+            "prompt-save": "Save & Quit",
+            "prompt-save-location": "Enter the path of the Markdown file to load",
+            "external": {
+                "id": "jira",
+                "url": "https://frontdeskhq.atlassian.net/jira/software/c/projects/FD/boards/7/backlog?view=detail&selectedIssue="
+            },
+            "ctx": [
+                {"⬜":  "⬜ todo"},
+                {"✅":  "✅ done"},
+                # mojii: https://emojidb.org
+            ],
+            "debug": 0,
+            "tmpl": [
+                {id: "⛔", "desc": "Invalid"}
+            ],
+            "status-types-selections-invalid": "⛔ Invalid selection.",
+            "separator-1": "________________________",
+            "separator-2": "______________",
+            "table-header": "| ID  | $external_id | Description |",
+            "table-header-divider": "----------",
         }
         res["table-separator"] = f"| {res['table-header-divider']} | {res['table-header-divider']} |"
         return res
