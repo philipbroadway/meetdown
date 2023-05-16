@@ -42,7 +42,7 @@ class MeetDown:
               {"✅":  "✅ done"},
               # mojii: https://emojidb.org
           ],
-          "debug": 0,
+          "debug": 1,
           "tmpl": [
               {id: "⛔", "desc": "Invalid"}
           ],
@@ -374,81 +374,166 @@ class MeetDown:
         else:
             print("Markdown data not found.")
 
+    def update_data_item_categories(self, data, category):
+        # print(f"\n-------before: {data}------")
+        keys = [category]
+        for entity in data.keys():
+            entitity_keys = []
+            for key in data[entity]:
+              keys.append(key)
+        unique_keys = set(keys)
+        for entity in data.keys():
+            for key in unique_keys:
+                if key not in data[entity]:
+                    data[entity][key] = []
+        # print(f"\n-------after: {data}------")
 
     def load_from_markdown(self, file_path):
-        path = str(file_path).strip()
-        if not os.path.isfile(path):
-            print(f"Error: No such file or directory: '{path}'")
-            return
+      path = str(file_path).strip()
+      if not os.path.isfile(path):
+          print(f"Error: No such file or directory: '{path}'")
+          return
 
-        with open(file_path, 'r') as file:
-            content = file.read()
+      with open(file_path, 'r') as file:
+          content = file.read()
 
-        entity_headers = re.findall(r'##\s+(.+)\s+', content)
-        data = {}
-        page_refs = []
-        for entity_header in entity_headers:
-            entity_regex = r'##\s+' + re.escape(entity_header) + r'\s+.*\|.*\|.*\|.*\n((?:.*\|.*\|.*\|.*\n)*)'
-            entity_match = re.search(entity_regex, content)
-            if entity_match:
-                entity_content = entity_match.group(1)
-                category_regex = r'\|(.+)\|(.+)\|(.+)\|'
-                category_matches = re.findall(category_regex, entity_content)
-                if self.config['debug']:
-                    print(f"category_matches: {category_matches}", entity_content)
-                if category_matches:
-                    data[entity_header] = {}
-                    for category_match in category_matches:
-                        category = category_match[0].strip()
-                        description = category_match[2].strip()
-                        external_ticket = ""
-                        if self.config['debug']:
-                            print(f"category: {category}, description: {description} content: {category_match}")
+      entity_headers = re.findall(r'##\s+(.+)\s+', content)
+      data = {}
+      page_refs = []
+      for entity_header in entity_headers:
+          entity_regex = r'##\s+' + re.escape(entity_header) + r'\s+.*\|.*\|.*\|.*\n((?:.*\|.*\|.*\|.*\n)*)'
+          entity_match = re.search(entity_regex, content)
+          if entity_match:
+              entity_content = entity_match.group(1)
+              category_regex = r'\|(.+)\|(.+)\|(.+)\|'
+              category_matches = re.findall(category_regex, entity_content)
+              if self.config['debug']:
+                  print(f"category_matches: {category_matches}", entity_content)
+              if category_matches:
+                  data[entity_header] = {}
+                  for category_match in category_matches:
+                      category = category_match[0].strip()
+                      description = category_match[2].strip()
+                      external_ticket = ""
+                      if self.config['debug']:
+                          print(f"category: {category}, description: {description} content: {category_match}")
 
-                        is_header = re.findall(r'^-+$', category)
-                        if is_header:
-                            if self.config['debug']:
-                                print(f"Header found {category}")
-                            continue
-                        link_regex = r'\[(.*?)\]'
-                        
-                        for match in category_match:
-                            item = {"description": "", "external_ticket": ""}
-                            if re.search(link_regex, match):
-                                if self.config['debug']:
-                                    print("match: ", match)
+                      is_header = re.findall(r'^-+$', category)
+                      if is_header:
+                          if self.config['debug']:
+                              print(f"Header found {category}")
+                          continue
+                      link_regex = r'\[(.*?)\]\[(.*?)\]'
+                      item = {"description": category_match[2], "external_ticket": ""}
+                      for match in category_match:
+                         
+                          if re.search(link_regex, match):
+                              if self.config['debug']:
+                                  print("match: ", match)
 
-                                link_match = re.search(link_regex, match)
-                                print(link_match, description)
-                                if link_match:
-                                    if self.config['debug']:
-                                        print("link found: ", link_match.group(1))
-                                    print(f"desc?? found: {link_match.group(1)} {match}")
-                                    description = link_match.group(1).strip()
-                                    external_ticket = link_match.group(1).strip()
+                              link_match = re.search(link_regex, match)
+                              print(link_match, description)
+                              if link_match:
+                                  if self.config['debug']:
+                                      print("link found: ", link_match.group(1))
+                                  description = link_match.group(1).strip()
+                                  external_ticket = link_match.group(2).strip()
 
-                                    page_refs.append(f"{external_ticket}-ref")
+                                  page_refs.append(f"{external_ticket}-ref")
+                                  item["external_ticket"] = external_ticket
+                                  print(f"----->external_ticket: {external_ticket} description: {description}")
+                              print(f"----->item: {item}")
 
-                                    item = {
-                                        "external_ticket": external_ticket,
-                                        "description": category_match[2]
-                                    }
+                      self.update_data_item_categories(data, category)
+                      data[entity_header][category].append(item)
 
-                                    if category not in data[entity_header]:
-                                        data[entity_header][category] = []
+      for ref in page_refs:
+          pattern = re.escape(f"[{ref}]:") + r'\s*(.*?)\s*$'
+          url_match = re.search(pattern, content, re.MULTILINE)
+          if url_match:
+              url = url_match.group(1)
+              key = f"{ref.replace('-ref', '')}"
+              replaced = url.replace(f"{key}", "")
+              self.config['external']['url'] = replaced
 
-                                    data[entity_header][category].append(item)
+      return data, self.config
+
+
+    # def load_from_markdown(self, file_path):
+    #     path = str(file_path).strip()
+    #     if not os.path.isfile(path):
+    #         print(f"Error: No such file or directory: '{path}'")
+    #         return
+
+    #     with open(file_path, 'r') as file:
+    #         content = file.read()
+
+    #     entity_headers = re.findall(r'##\s+(.+)\s+', content)
+    #     data = {}
+    #     page_refs = []
+    #     for entity_header in entity_headers:
+    #         entity_regex = r'##\s+' + re.escape(entity_header) + r'\s+.*\|.*\|.*\|.*\n((?:.*\|.*\|.*\|.*\n)*)'
+    #         entity_match = re.search(entity_regex, content)
+    #         if entity_match:
+    #             entity_content = entity_match.group(1)
+    #             category_regex = r'\|(.+)\|(.+)\|(.+)\|'
+    #             category_matches = re.findall(category_regex, entity_content)
+    #             if self.config['debug']:
+    #                 print(f"category_matches: {category_matches}", entity_content)
+    #             if category_matches:
+    #                 data[entity_header] = {}
+    #                 for category_match in category_matches:
+    #                     category = category_match[0].strip()
+    #                     description = category_match[2].strip()
+    #                     external_ticket = ""
+    #                     if self.config['debug']:
+    #                         print(f"category: {category}, description: {description} content: {category_match}")
+
+    #                     is_header = re.findall(r'^-+$', category)
+    #                     if is_header:
+    #                         if self.config['debug']:
+    #                             print(f"Header found {category}")
+    #                         continue
+    #                     link_regex = r'\[(.*?)\]'
+    #                     print(f"category_match--->: {category_match}{entity_header}{category}")
+    #                     for match in category_match:
+    #                         item = {"description": "", "external_ticket": ""}
+    #                         if re.search(link_regex, match):
+    #                             if self.config['debug']:
+    #                                 print("match: ", match)
+
+    #                             link_match = re.search(link_regex, match)
+    #                             print(link_match, description)
+    #                             if link_match:
+    #                                 if self.config['debug']:
+    #                                     print("link found: ", link_match.group(1))
+    #                                 print(f"desc?? found: {link_match.group(1)} {match}")
+    #                                 description = link_match.group(1).strip()
+    #                                 external_ticket = link_match.group(1).strip()
+
+    #                                 page_refs.append(f"{external_ticket}-ref")
+
+    #                                 item = {
+    #                                     "external_ticket": external_ticket,
+    #                                     "description": category_match[2]
+    #                                 }
+
+    #                                 if category not in data[entity_header]:
+    #                                     data[entity_header][category] = []
+
+    #                             data[entity_header][category].append(item)
+    #                             print(f"item ->: {item}")
         
-        for ref in page_refs:
-            pattern = re.escape(f"[{ref}]:") + r'\s*(.*?)\s*$'
-            url_match = re.search(pattern, content, re.MULTILINE)
-            if url_match:
-                url = url_match.group(1)
-                key = f"{ref.replace('-ref', '')}"
-                replaced = url.replace(f"{key}", "")
-                self.config['external']['url'] = replaced
+    #     for ref in page_refs:
+    #         pattern = re.escape(f"[{ref}]:") + r'\s*(.*?)\s*$'
+    #         url_match = re.search(pattern, content, re.MULTILINE)
+    #         if url_match:
+    #             url = url_match.group(1)
+    #             key = f"{ref.replace('-ref', '')}"
+    #             replaced = url.replace(f"{key}", "")
+    #             self.config['external']['url'] = replaced
 
-        return data, self.config
+    #     return data, self.config
 
     def kebob(self, text):
         return text.lower().replace(" ", "-")
