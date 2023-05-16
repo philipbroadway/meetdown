@@ -4,7 +4,7 @@ NAME="""
 ┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
 ________________________
 """
-import os
+import os, time
 import getpass
 import argparse
 import datetime
@@ -31,6 +31,7 @@ class MeetDown:
             "prompt-add": "Add",
             "prompt-remove": "Remove",
             "prompt-toggle": "Toggle",
+            "prompt-edit": "Edit",
             "prompt-load": "Load",
             "prompt-save": "Save & Quit",
             "prompt-save-location": "Enter the path of the Markdown file to load",
@@ -38,16 +39,22 @@ class MeetDown:
                 "id": "jira",
                 "url": "https://frontdeskhq.atlassian.net/jira/software/c/projects/FD/boards/7/backlog?view=detail&selectedIssue="
             },
-            "ctx": [
+            "states": [
                 {"⬜":  "⬜ todo"},
                 {"✅":  "✅ done"},
+                # {"🔴":  "🔴 blocked"},
+                # {"🟡":  "🟡 in-progress"},
+                # {"🟢":  "🟢 ready-review"},
+                # {"🟣":  "🟣 review"},
+                # {"🟤":  "🟤 ready-test"},
+                # {"🔵":  "🔵 test"},
                 # mojii: https://emojidb.org
             ],
             "debug": 0,
             "tmpl": [
                 {id: "⛔", "desc": "Invalid"}
             ],
-            "status-types-selections-invalid": "⛔ Invalid selection.",
+            "invalid": "⛔ Invalid ",
             "separator-1": "________________________",
             "separator-2": "______________",
             "table-header": "| ID  | $external_id | Description |",
@@ -67,21 +74,37 @@ class MeetDown:
 
     def status_types(self):
         types = []
-        for obj in self.config['ctx']:
+        for obj in self.config['states']:
             for key in obj:
                 types.append(key)
         return types
+
+    def editables(self):
+        
+        result = []
+
+        for entity in self.md_data.keys():
+            
+            for category in self.md_data[entity].keys():
+                category_index = 0
+                for item in self.md_data[entity][category]:
+                    result.append({"entity": entity, "category": category, "item": item, "category_index": category_index, "external_ticket": item['external_ticket'], "description": item['description']})
+                category_index += 1
+        # print(f"editables: {result}")
+        return result
 
     def generate_options(self):
         opts = []
         opts.append(f"1. {self.config['prompt-add']}")
         opts.append(f"2. {self.config['prompt-remove']}")
         opts.append(f"3. {self.config['prompt-toggle']}")
-        opts.append(f"4. {self.config['prompt-load']}")
-        opts.append(f"5. {self.config['prompt-save']}")
+        opts.append(f"4. {self.config['prompt-edit']}")
+        opts.append(f"5. {self.config['prompt-load']}")
+        opts.append(f"6. {self.config['prompt-save']}")
+        
     
         if self.config['debug']:
-          opts.append(f"6. Upload")
+          opts.append(f"7. Upload")
         
         return "\n".join(["\n".join(opts)])
 
@@ -128,7 +151,8 @@ class MeetDown:
         # Now, print all items and let the user select one
         for i, (entity, category, item) in enumerate(all_items, start=1):
             print(f"{i}. {entity} - {category} - {item['description']}")
-        item_index = input(f"Toggle {entity} {category} to?: ")
+        
+        item_index = input(f"Toggle which item?: ")
         if item_index == '':  # if input is empty, return to main menu
             return
         item_index = int(item_index) - 1
@@ -137,13 +161,13 @@ class MeetDown:
         entity, from_category, item = all_items[item_index]
 
         # Now, let the user select the new category
-        for i, ctx in enumerate(self.config['ctx'], start=1):
-            print(f"{i}. {list(ctx.keys())[0]}")
+        for i, states in enumerate(self.config['states'], start=1):
+            print(f"{i}. {list(states.keys())[0]}")
         to_category_index = input("Select the new category of the item by entering the number: ")
         if to_category_index == '':  # if input is empty, return to main menu
             return
         to_category_index = int(to_category_index) - 1
-        to_category = list(self.config['ctx'][to_category_index].keys())[0]
+        to_category = list(self.config['states'][to_category_index].keys())[0]
 
         self.toggle_status(entity, from_category, to_category, item)
 
@@ -155,11 +179,11 @@ class MeetDown:
         self.md_data[entity][to_category].append(item)
 
     def add_entity(self, entity):
-        self.md_data[entity] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}
+        self.md_data[entity] = {list(states.keys())[0]: [] for states in self.config['states']}
         self.config['status-types'].append(entity)
         if entity not in self.md_data:
             self.md_data[entity] = {}
-            for category in self.config['ctx']:
+            for category in self.config['states']:
                 self.md_data[entity][list(category.keys())[0]] = []
 
     def remove_entity(self, entity):
@@ -228,6 +252,55 @@ class MeetDown:
             "external_ticket": external_ticket,
             "description": description
     })
+        
+    def edit_ticket_or_description(self, editable):
+        ticket_or_description = input("\nOptions:\n1. Ticket\n2. Description\n\nSelect an option by entering the number: ")
+        if not ticket_or_description.isdigit():
+            print("Invalid input. Please enter a number.")
+            return None, None, None
+        ticket_or_description = 1 if int(ticket_or_description) == 1 else 2
+        ticket_key = 'external_ticket' if ticket_or_description == 1 else 'description'
+        print(f"Current:\n {editable[ticket_key]}\n")
+        input_text = input(f"\nNew value:")
+        if input_text == '':
+            return None, None, None
+
+        return editable, ticket_or_description, input_text
+
+        
+    def edit_prompt(self):
+      print("\nEditables:\n")
+      for i, editable in enumerate(self.editables(), start=1):
+          ticket = f"{editable['external_ticket']}" if editable['external_ticket'] else "N/A"
+          print(f"{i}. {editable['category']} | {editable['entity']} | {ticket} | {editable['description']}")
+
+      selected_index = input("\nSelect an editable item by entering the number: ")
+      if not selected_index.isdigit():
+          print(f"{self.config['invalid']}")
+          return None
+
+      selected_index = int(selected_index)
+      if selected_index < 1 or selected_index > len(self.editables()):
+          print(f"{self.config['invalid']}")
+          return None
+
+      selected_editable = self.editables()[selected_index - 1]
+
+      editable, ticket_or_description, input_text = self.edit_ticket_or_description(selected_editable)
+      return self.edit(selected_editable, ticket_or_description, input_text)
+
+    def edit(self, editable, option, new_value):
+      data = self.md_data
+      option_key = 'external_ticket' if option == 1 else 'description'
+      print(f"Edit {option_key}: {editable[option_key]} -> {new_value}")
+      for type in data[editable['entity']]:
+          for i, item in enumerate(data[editable['entity']][type]):
+              if item['external_ticket'] == editable['external_ticket'] and item['description'] == editable['description']:
+                  print(f"✅  {editable['entity']} - {type} - {new_value} -> {data[editable['entity']][type][i][option_key]}")
+                  self.md_data[editable['entity']][type][i][option_key] = new_value
+                  print(f"✅ {data[editable['entity']][type][i][option_key]}")
+                  continue
+      return data, self.config
 
     def remove(self):
       # Prepare a list of all items, each entity and each entity's category items
@@ -430,10 +503,10 @@ class MeetDown:
         print(f"\n💾: {os.getcwd()}/{self.config['tmp']}\n")
 
 
-    def ensure_default_ctx_items_exist_in_md_data(self):
+    def ensure_default_states_items_exist_in_md_data(self):
         for record in self.config['status-types']:
             if record not in self.md_data:
-                self.md_data[record] = {list(ctx.keys())[0]: [] for ctx in self.config['ctx']}
+                self.md_data[record] = {list(states.keys())[0]: [] for states in self.config['states']}
 
     def preview(self, md_data):
         result = []
@@ -467,12 +540,12 @@ class MeetDown:
         return result
 
     def meetdown(self, args, config, md_data):
-        self.md_data = md_data#{entity: {list(ctx.keys())[0]: [] for ctx in self.config['ctx']} for entity in args.entities}
+        self.md_data = md_data#{entity: {list(states.keys())[0]: [] for states in self.config['states']} for entity in args.entities}
         self.config['status-types'] = args.entities
-        #ensure each entitiy has each ctx with an empty array
-        self.ensure_default_ctx_items_exist_in_md_data()
+        #ensure each entitiy has each states with an empty array
+        self.ensure_default_states_items_exist_in_md_data()
         while True:
-            # Ensure each entity has each ctx and same keys with an empty array and optionally items in each array
+            # Ensure each entity has each states and same keys with an empty array and optionally items in each array
             
             os.system('clear')
 
@@ -484,12 +557,12 @@ class MeetDown:
 
             # Options
             print(f"{self.config['separator-1']}\n\nOptions:\n\n{self.generate_options()}\n") 
-            self.ensure_default_ctx_items_exist_in_md_data()
+            self.ensure_default_states_items_exist_in_md_data()
             selected_option = input(f"{self.config['prompt-main']}: ")
             
             # If user hits return with no input, kbai
             if not selected_option:
-                self.ensure_default_ctx_items_exist_in_md_data()
+                self.ensure_default_states_items_exist_in_md_data()
                 self.write(self.config['tmp'], True)
                 break
             
@@ -499,33 +572,31 @@ class MeetDown:
                 print(f"\n{self.config['error-invalid-option']}\n")
                 continue
             
-            ctx_length = len(self.config['ctx'])
+            states_length = len(self.config['states'])
             if selected_option == 1:
-                # Add ctx item
                 self.add()
             elif selected_option == 2:
-                # Remove ctx item
                 self.remove()
             elif selected_option == 3:
-                # Toggle item
                 self.toggle()
             elif selected_option == 4:
+               self.edit_prompt()
+            elif selected_option == 5:
               file_path = input(f"{self.config['prompt-save-location']}: ")
               loaded_data, config = self.load_from_markdown(file_path)
               if loaded_data is not None and config is not None:
                   self.md_data = loaded_data
                   self.config = config
-            elif selected_option == 5:
-                # Save ctx to markdown
+            elif selected_option == 6:
                 self.save_to_file()
                 break
-            elif selected_option == 6:
-                # Save ctx & upload to gist
+            elif selected_option == 7:
+                # Save states & upload to gist
                 gist_desc = input("Enter a description for your `gist`: ")
                 self.write( self.config['tmp'])
                 # upload_to_gist(self.config['tmp'], gist_desc)
             else:
-                print(f"`${selected_option}` is an invalid option. \nEnter any number 1-{2*ctx_length+5} and hit return or hit return again to stash & exit")
+                print(f"`${selected_option}` is an invalid option. \nEnter any number 1-{2*states_length+5} and hit return or hit return again to stash & exit")
     def main(self):
         args = self.parse_arguments()
 
@@ -547,7 +618,6 @@ class MeetDown:
                     print("Failed to load data from file. Continuing with default configuration.")
 
         self.meetdown(args, self.config, self.md_data)
-
 
 if __name__ == "__main__":
     meetdown = MeetDown(MeetDown.default_config())

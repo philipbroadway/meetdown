@@ -56,7 +56,7 @@ class MeetDownParser:
             for key in data[entity].keys():
                 keys.append(key)
         
-        for item in config['ctx']:
+        for item in config['states']:
             for key in item.keys():
                 keys.append(key)
         keys = list(set(keys))
