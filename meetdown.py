@@ -1,71 +1,31 @@
+# NAME="""
+# ┌┬┐┌─┐┌─┐┌┬┐┌┬┐┌─┐┬ ┬┌┐┌
+# │││├┤ ├┤  │  │││ │││││││
+# ┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
+# ________________________
+# """
 NAME="""
-┌┬┐┌─┐┌─┐┌┬┐┌┬┐┌─┐┬ ┬┌┐┌
-│││├┤ ├┤  │  │││ │││││││
-┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
-________________________
+# meetdown
 """
 import os, time
-import getpass
+import shutil
 import argparse
 import datetime
-import re
 import panflute as pf
 from bs4 import BeautifulSoup
-import re
 import redis
 from meetdown_parser import MeetDownParser
+from meetdown_config import MeetDownConfig
+from meetdown_utils import MeetDownUtils
 
 class MeetDown:
     @staticmethod
     def default_config():
-        
-        res = {
-            "users": getpass.getuser(),
-            "title": f".meetdown.md",
-            "folder": f"{os.getcwd()}",
-            "tmp": ".meetdown.md",
-            "id": "👤",
-            "desc": "👤 person",
-            "prompt-type": "Option",
-            "prompt-main": "Enter number",
-            "prompt-add": "Add",
-            "prompt-remove": "Remove",
-            "prompt-toggle": "Toggle",
-            "prompt-edit": "Edit",
-            "prompt-load": "Load",
-            "prompt-save": "Save & Quit",
-            "prompt-save-location": "Enter the path of the Markdown file to load",
-            "external": {
-                "id": "jira",
-                "url": "https://frontdeskhq.atlassian.net/jira/software/c/projects/FD/boards/7/backlog?view=detail&selectedIssue="
-            },
-            "states": [
-                {"⬜":  "⬜ todo"},
-                {"✅":  "✅ done"},
-                # {"🔴":  "🔴 blocked"},
-                # {"🟡":  "🟡 in-progress"},
-                # {"🟢":  "🟢 ready-review"},
-                # {"🟣":  "🟣 review"},
-                # {"🟤":  "🟤 ready-test"},
-                # {"🔵":  "🔵 test"},
-                # mojii: https://emojidb.org
-            ],
-            "debug": 0,
-            "tmpl": [
-                {id: "⛔", "desc": "Invalid"}
-            ],
-            "invalid": "⛔ Invalid ",
-            "separator-1": "________________________",
-            "separator-2": "______________",
-            "table-header": "| ID  | $external_id | Description |",
-            "table-header-divider": "----------",
-            
-        }
-        res["table-separator"] = f"| {res['table-header-divider']} | {res['table-header-divider']} |"
-        return res
+        return MeetDownConfig.default_config()
 
     def __init__(self, config):
         self.config = config
+        self.utils = MeetDownUtils(config)
         self.md_data = {}
         redis_host = os.environ.get('REDIS_HOST')
         redis_port = os.environ.get('REDIS_PORT')
@@ -90,8 +50,12 @@ class MeetDown:
                 for item in self.md_data[entity][category]:
                     result.append({"entity": entity, "category": category, "item": item, "category_index": category_index, "external_ticket": item['external_ticket'], "description": item['description']})
                 category_index += 1
-        # print(f"editables: {result}")
+
         return result
+    
+    def get_terminal_width(self):
+        terminal_width, _ = shutil.get_terminal_size()
+        return terminal_width
 
     def generate_options(self):
         opts = []
@@ -102,7 +66,6 @@ class MeetDown:
         opts.append(f"5. {self.config['prompt-load']}")
         opts.append(f"6. {self.config['prompt-save']}")
         
-    
         if self.config['debug']:
           opts.append(f"7. Upload")
         
@@ -135,7 +98,7 @@ class MeetDown:
     def toMarkdownExternalURL(self,id):
         return f"[{id}]({self.config['external']['url']}{id})"
 
-    def toggle(self):
+    def toggle_prompt(self):
         # First, create a flat list of all items
         all_items = []
         for entity, data in self.md_data.items():
@@ -143,7 +106,6 @@ class MeetDown:
                 for item in items:
                     all_items.append((entity, category, item))
 
-        # If there are no items, return
         if not all_items:
             print("No items to toggle.")
             return
@@ -189,9 +151,8 @@ class MeetDown:
     def remove_entity(self, entity):
         if entity in self.md_data:
           del self.md_data[entity]
-          #self.config['status-types'].remove(entity)
 
-    def add(self):
+    def add_prompt(self):
         # Get the list of all types of items
         item_types = self.status_types()
         item_count = 0
@@ -298,7 +259,7 @@ class MeetDown:
                   continue
       return data, self.config
 
-    def remove(self):
+    def remove_prompt(self):
       # Prepare a list of all items, each entity and each entity's category items
       items = []
       item_count = 0
@@ -487,7 +448,6 @@ class MeetDown:
         return ""
 
 
-
     def write(self, filename, buhbye=False):
         with open(filename, "w") as file:
             
@@ -501,11 +461,20 @@ class MeetDown:
 
     def ensure_default_states_items_exist_in_md_data(self):
         for record in self.config['status-types']:
-            if record not in self.md_data:
-                self.md_data[record] = {list(states.keys())[0]: [] for states in self.config['states']}
+            for entity in self.md_data.keys():
+                if record not in self.md_data[entity]:
+                    self.md_data[entity][record] = []
+            # if record not in self.md_data:
+            #     self.md_data[record] = {list(states.keys())[0]: [] for states in self.config['states']}
 
-    def preview(self, md_data):
-        result = []
+    def preview(self, md_data, pretty=False):
+        now = datetime.datetime.now()
+        now = now.strftime("%m-%d-%Y-%I-%M-%p")
+        result =[]
+        if pretty:
+          result = [f"{NAME} > {now}", ""]
+        else:
+          result = [f"{NAME}", f"> {now}", ""]
         interval = 0
         refs = []
         for entity, data in md_data.items():
@@ -520,7 +489,11 @@ class MeetDown:
                       if item.get("external_ticket"):
                         refs.append(self.createInternalReferenceLink(item))
                         external_ticket = self.toInternalLink(item)
-                        result.append(f"| {category} | {external_ticket} | {item['description']} |\n")
+                        ticket = item['external_ticket'] if pretty else {external_ticket}
+                        ticket = f"[{ticket}]" if pretty else ticket
+                        if self.config['debug']:
+                            print(f"external_ticket: {external_ticket} item: {item}")
+                        result.append(f"| {category} | {ticket} | {item['description']} |\n")
                       else:
                         result.append(f"| {category} |  | {item['description']} |\n")
             result.append("")
@@ -529,30 +502,50 @@ class MeetDown:
             result.append("\n\n")
             # remove duplicates
             uniq_refs = list(set(refs))
-            for ref in uniq_refs:
-                result.append(f"{ref}\n")
-        result.append("\n")
+            if not pretty:
+                for ref in uniq_refs:
+                  result.append(f"{ref}\n")
+                result.append("\n")
+        
 
         return result
+    
+    def notify(self, message):
+        if os.name == 'posix' and os.uname().sysname == 'Darwin':
+            try:
+                from pync import Notifier
+            except ImportError:
+                exit(1)
+
+            # Need to know absolute path to script & mardown file
+            # Notifier.notify('Is ? still ?', execute=python absolute/path/to/meetdown meetdown/file/path)'
+            Notifier.notify(f"{message}")
+
+        # else:
+        #     print("This method is intended to run on macOS only.")
 
     def meetdown(self, args, config, md_data):
         self.md_data = md_data#{entity: {list(states.keys())[0]: [] for states in self.config['states']} for entity in args.entities}
         self.config['status-types'] = args.entities
         #ensure each entitiy has each states with an empty array
         self.ensure_default_states_items_exist_in_md_data()
+
         while True:
             # Ensure each entity has each states and same keys with an empty array and optionally items in each array
             
             os.system('clear')
-
-            print(f"{NAME}")
+            width = self.get_terminal_width()
+            # print(f"{NAME}")
             # Preview
-            previews = self.preview(self.md_data)
+            previews = self.preview(self.md_data, True)
             for preview in previews:
                 print(preview.replace("\n",""))## We dont want to show \n only used for written file
 
             # Options
-            print(f"{self.config['separator-1']}\n\nOptions:\n\n{self.generate_options()}\n") 
+            if self.config['debug']:
+                print(f"{self.config['separator-1']}\n\nOptions:\n\n{self.generate_options()}\n") 
+            else:
+                print(f"Options:\n\n{self.generate_options()}\n") 
             self.ensure_default_states_items_exist_in_md_data()
             selected_option = input(f"{self.config['prompt-main']}: ")
             
@@ -570,11 +563,11 @@ class MeetDown:
             
             states_length = len(self.config['states'])
             if selected_option == 1:
-                self.add()
+                self.add_prompt()
             elif selected_option == 2:
-                self.remove()
+                self.remove_prompt()
             elif selected_option == 3:
-                self.toggle()
+                self.toggle_prompt()
             elif selected_option == 4:
                self.edit_prompt()
             elif selected_option == 5:
@@ -612,9 +605,9 @@ class MeetDown:
                 else:
                     # Display an error message and continue with default data
                     print("Failed to load data from file. Continuing with default configuration.")
-
+        self.clear_screen()
         self.meetdown(args, self.config, self.md_data)
 
 if __name__ == "__main__":
-    meetdown = MeetDown(MeetDown.default_config())
+    meetdown = MeetDown(MeetDownConfig.default_config())
     meetdown.main()
