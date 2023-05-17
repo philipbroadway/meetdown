@@ -553,7 +553,7 @@ class MeetDown:
             elif selected_option == 5:
               file_path = input(f"{self.config['prompt-save-location']}: ")
               if not file_path:
-                  return
+                  continue
               loaded_data, config = self.load_from_markdown(file_path)
               if loaded_data is not None and config is not None:
                   self.md_data = loaded_data
