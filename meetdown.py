@@ -4,9 +4,7 @@
 # ┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
 # ________________________
 # """
-NAME="""
-# meetdown
-"""
+NAME="# meetdown"
 import os, time
 import argparse
 import datetime
@@ -457,7 +455,7 @@ class MeetDown:
         if compact:
           result = [f"{NAME} > {now}", ""]
         else:
-          result = [f"", f"\n> {now}", "\n\n"]
+          result = [f"{NAME} @ {now}", "\n\n"]
         interval = 0
         refs = []
         for entity, data in md_data.items():
@@ -465,7 +463,7 @@ class MeetDown:
             result.append(f"{new_line}## {entity}")
             if not compact:
                 result.append("\n")
-                result.append("\n")
+                # result.append("\n")
             result.append(f"{spacer}| Category | {self.external().capitalize()} Ticket | Description |\n")
             result.append(f"{spacer}{self.config['table-separator']}\n")
 
