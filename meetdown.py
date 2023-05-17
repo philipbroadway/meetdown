@@ -446,9 +446,9 @@ class MeetDown:
         spacer = " " if compact else ""
         result =[]
         if compact:
-          result = [f" {self.states()[1]} {NAME} MeetDown > {now}", ""]
+          result = [f" {self.states()[1]} {NAME} MeetDown > {self.config['title']}{now}", ""]
         else:
-          result = [f"{NAME} MeetDown @ {now}", "\n\n"]
+          result = [f"{NAME} {self.config['title']} @ {now}", "\n\n"]
         interval = 0
         refs = []
         for entity, data in sorted(data.items()):
@@ -562,10 +562,11 @@ class MeetDown:
         if os.path.exists(self.config['tmp']):
             self.utils.clear_screen()
             print(f"{ASCII}\n")
-
-            load_previous = input(f"[n]\tNew MeetDown\n[enter]\tor enter to resume: ")  == ""
-            print(f"load_previous: {load_previous}")
-            if load_previous:
+            print(f"\nOptions:\n\n- Create New MeetDown - Enter new MeetDown name & press return\n- Resume Last MeetDown - Press return to resume")
+            title = input(f"\n  meetdown > ")
+            empty_title = title == None or title == ""
+            print(f"title: {title}")
+            if empty_title:
                 loaded_data, config = self.load_from_markdown(self.config['tmp'])  
                 if self.config['debug']:
                   print(f'loaded_data: {loaded_data} config: {config}')
@@ -573,9 +574,12 @@ class MeetDown:
                 if loaded_data is not None and config is not None:
                     self.data = loaded_data
                     self.config = config
-                else:
-                    # Display an error message and continue with default data
-                    print("Failed to load data from file. Continuing with default configuration.")
+            elif title:
+                empty_title = True
+                self.config['title'] = title
+            else:
+                # Display an error message and continue with default data
+                print("Failed to load data from file. Continuing with default configuration.")
         self.utils.clear_screen()
         self.meetdown(args, self.config, self.data)
 
