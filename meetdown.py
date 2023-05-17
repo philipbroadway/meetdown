@@ -432,8 +432,8 @@ class MeetDown:
             for line in self.preview(self.data):
                 file.write(line)
         if buhbye:
-            print(f"\nkthx👋")
-        print(f"\n💾: file:/{MeetDownUtils.pwd()}/{filename}\n")
+            print(f"\n kthx👋")
+        print(f"\n 💾: file:/{MeetDownUtils.pwd()}/{filename}\n")
 
     def ensure_default_states_items_exist_in_data(self):
         for record in self.config['imported-states']:
@@ -446,7 +446,7 @@ class MeetDown:
         spacer = " " if compact else ""
         result =[]
         if compact:
-          result = [f" {self.states()[1]} {NAME} MeetDown > {self.config['title']}{now}", ""]
+          result = [f"{self.states()[1]} MeetDown://{self.config['title']}{now}", ""]
         else:
           result = [f"{NAME} {self.config['title']} @ {now}", "\n\n"]
         interval = 0
@@ -507,7 +507,7 @@ class MeetDown:
         while True:
             os.system('clear')
             # Preview
-            
+            print("")
             previews = self.render_terminal_preview(self.config, self.data, True)
             for preview in previews:
                 print(preview)
