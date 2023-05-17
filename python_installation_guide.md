@@ -2,13 +2,13 @@
 
 ## Prerequisites
 
--[ ] Ensure you have a C compiler and the OpenSSL library installed on your system
+- [ ] Ensure you have a C compiler and the OpenSSL library installed on your system
 
--[ ] Mac users can install OpenSSL using [Homebrew](https://brew.sh/)
+- [ ] Mac users can install OpenSSL using [Homebrew](https://brew.sh/)
 
--[ ] Windows users can install OpenSSL using [Chocolatey](https://chocolatey.org/)
+- [ ] Windows users can install OpenSSL using [Chocolatey](https://chocolatey.org/)
 
--[ ] Linux users can install OpenSSL using their package manager (yum, apt, etc)
+- [ ] Linux users can install OpenSSL using their package manager (yum, apt, etc)
 
 ### Linux/macOS
 
