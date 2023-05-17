@@ -9,7 +9,7 @@
 
 ## Prerequisites
 
-* Python 3 >= 3.6 [Python installation](https://github.com/frontdesk/meetdown/blob/main/python_installation_guide.md)
+* [Python 3+](https://github.com/frontdesk/meetdown/blob/main/python_installation_guide.md)
 
 --or--  
 
