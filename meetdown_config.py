@@ -51,5 +51,5 @@ class MeetDownConfig:
             "table-header": "| ID  | $external_id | Description |",
             "table-header-divider": "----------",
         }
-        res["table-separator"] = f"| {res['table-header-divider']} | {res['table-header-divider']} |"
+        res["table-separator"] = f"| {res['table-header-divider']} | {res['table-header-divider']} | {res['table-header-divider']} |"
         return res

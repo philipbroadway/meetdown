@@ -18,18 +18,18 @@ class MeetDownParser:
       -------------------------
 
       The input format should consist of entity headers preceded by '##', followed by a table with three columns:
-      - Category: The category of the item (e.g. '✅', '⬜', etc.).
+      - Category: The category of the item (e.g. '✅', '⬜', or any string.).
       - External Ticket: The ticket ID from an external ticketing system (e.g. Jira, Trello, etc.) enclosed in square brackets.
       - Description: The description of the item.
 
-      An enity header & data table should be present for every entity in the markdown file (aka each person in the meeting)
+      * An enity header & data table should be present for every entity/person in the markdown file.
 
-      External links:
+      [External links]:
       - External tracking urls are supported by adding a reference link at the bottom of the markdown file using the following convention:
         - Given a ticket ID of 'foo123' and a ticketing system view ticket URL of 'https://some.tracker.com/?issue=':
           - The row in the data table should contain '[foo123][foo123-ref]'
           - The markdown file should contain '[foo123-ref]: https://some.tracker.com/?issue=foo123' at bottom listed with other external links
-      - [TODO:] Supports multiple tickets but currently only supports one ticketing system URL
+      - [TODO:] Supports multiple tickets but **currently only supports one ticketing system URL**
 
       Output:
       -------------------------
@@ -132,7 +132,6 @@ class MeetDownParser:
             if re.search(link_regex, match):
                 link_match = re.search(link_regex, match)
                 if link_match:
-                    description = link_match.group(1).strip()
                     external_ticket = link_match.group(2).strip()
 
                     # Remove "-ref" from the external_ticket if it's already there
