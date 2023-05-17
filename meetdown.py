@@ -4,7 +4,7 @@ ASCII="""
 ┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
 ________________________
 """
-NAME="# meetdown"
+NAME="#"
 import os, time
 import argparse
 import datetime
@@ -29,17 +29,45 @@ class MeetDown:
         redis_password = os.environ.get('REDIS_PASSWORD')
         self.redis_client = redis.Redis(host=redis_host, port=redis_port, password=redis_password)
 
+    def parse_arguments(self):
+      now = self.utils.now()
+      whoiam = self.utils.whoami()
+      parser = argparse.ArgumentParser(description='Process command-line arguments.')
+      parser.add_argument('--title', type=str, default=f"meetdown-{now}", help='Title (default: aws-p13.md)')
+      parser.add_argument('--entities', type=str, default=whoiam, help='Comma separated people or entities (example: pike13,aws-sales)')
+      parser.add_argument('--out', type=str, default=MeetDownUtils.pwd(), help='Save directory path (default: empty string)')
+      args = parser.parse_args()
+
+      if args.entities:
+          args.entities = args.entities.split(',')
+      return args
+
+    def states(self):
+        return ["⚫","⚪","🔵","🟡","🟢","🔴"]# off, on, busy, warn, done, error
+
     def status_types(self):
         types = []
         for obj in self.config['states']:
             for key in obj:
                 types.append(key)
         return types
+    
+    def notify(self, message):
+        if os.name == 'posix' and os.uname().sysname == 'Darwin':
+            try:
+                from pync import Notifier
+            except ImportError:
+                exit(1)
+
+            # Need to know absolute path to script & mardown file
+            # Notifier.notify('Is ? still ?', execute=python absolute/path/to/meetdown meetdown/file/path)'
+            Notifier.notify(f"{message}")
+
+        # else:
+        #     print("This method is intended to run on macOS only.")
 
     def editables(self):
-        
         result = []
-
         for entity in self.md_data.keys():
             for category in self.md_data[entity].keys():
                 category_index = 0
@@ -54,33 +82,6 @@ class MeetDown:
                       })
                 category_index += 1
         return result
-
-    def generate_options(self):
-        opts = []
-        opts.append(f" 1. {self.config['prompt-add']}")
-        opts.append(f" 2. {self.config['prompt-remove']}")
-        opts.append(f" 3. {self.config['prompt-toggle']}")
-        opts.append(f" 4. {self.config['prompt-edit']}")
-        opts.append(f" 5. {self.config['prompt-load']}")
-        opts.append(f" 6. {self.config['prompt-save']}")
-        
-        if self.config['debug']:
-          opts.append(f"7. Upload")
-        
-        return "\n".join(["\n".join(opts)])
-
-    def parse_arguments(self):
-      now = self.utils.now()
-      whoiam = self.utils.whoami()
-      parser = argparse.ArgumentParser(description='Process command-line arguments.')
-      parser.add_argument('--title', type=str, default=f"meetdown-{now}", help='Title (default: aws-p13.md)')
-      parser.add_argument('--entities', type=str, default=whoiam, help='Comma separated people or entities (example: pike13,aws-sales)')
-      parser.add_argument('--out', type=str, default=MeetDownUtils.pwd(), help='Save directory path (default: empty string)')
-      args = parser.parse_args()
-
-      if args.entities:
-          args.entities = args.entities.split(',')
-      return args
 
     def external(self):
         return self.config['external']['id']
@@ -447,9 +448,9 @@ class MeetDown:
         spacer = " " if compact else ""
         result =[]
         if compact:
-          result = [f"{NAME} > {now}", ""]
+          result = [f" {self.states()[1]} {NAME} MeetDown > {now}", ""]
         else:
-          result = [f"{NAME} @ {now}", "\n\n"]
+          result = [f"{NAME} MeetDown @ {now}", "\n\n"]
         interval = 0
         refs = []
         for entity, data in md_data.items():
@@ -458,8 +459,14 @@ class MeetDown:
             if not compact:
                 result.append("\n")
                 result.append("\n")
-            result.append(f"{spacer}| Category | {self.external().capitalize()} Ticket | Description |\n")
-            result.append(f"{spacer}{self.config['table-separator']}\n")
+            has_items = False
+            for category, items in data.items():
+                if len(items) > 0:
+                    has_items = True
+                    break
+            if has_items or not compact:
+              result.append(f"{spacer}| Category | {self.external().capitalize()} Ticket | Description |\n")
+              result.append(f"{spacer}{self.config['table-separator']}\n")
 
             for category, items in data.items():
                   for item in items:
@@ -482,20 +489,6 @@ class MeetDown:
                   result.append(f"{ref}\n")
         return result
     
-    def notify(self, message):
-        if os.name == 'posix' and os.uname().sysname == 'Darwin':
-            try:
-                from pync import Notifier
-            except ImportError:
-                exit(1)
-
-            # Need to know absolute path to script & mardown file
-            # Notifier.notify('Is ? still ?', execute=python absolute/path/to/meetdown meetdown/file/path)'
-            Notifier.notify(f"{message}")
-
-        # else:
-        #     print("This method is intended to run on macOS only.")
-    
     def render_terminal_preview(self, config, md_data, compact=False):
         result = []
         previews = self.preview(md_data, True)
@@ -503,9 +496,9 @@ class MeetDown:
                 result.append(preview.replace("\n",""))
 
         if self.config['debug']:
-            result.append(f"{self.config['separator-1']}\n\nOptions:\n\n{self.generate_options()}\n") 
+            result.append(f"{self.config['separator-1']}\n\nOptions:\n\n{MeetDownConfig.generate_options(self.config)}\n") 
         else:
-            result.append(f"Options:\n\n{self.generate_options()}\n")
+            result.append(f"Options:\n\n{MeetDownConfig.generate_options(self.config)}\n")
         return result
 
     def meetdown(self, args, config, md_data):
@@ -568,10 +561,9 @@ class MeetDown:
 
         # Check if the temporary file exists
         if os.path.exists(self.config['tmp']):
-            # If it exists, ask the user if they want to load it
             self.utils.clear_screen()
             print(f"{ASCII}\n")
-            restore_file_desc = f"📌 {MeetDownUtils.pwd()}{self.config['tmp']}"
+
             load_previous = input(f"[n]\tNew MeetDown\n[enter]\tor enter to resume: ")  == ""
             print(f"load_previous: {load_previous}")
             if load_previous:
