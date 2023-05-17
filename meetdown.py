@@ -57,12 +57,12 @@ class MeetDown:
 
     def generate_options(self):
         opts = []
-        opts.append(f"1. {self.config['prompt-add']}")
-        opts.append(f"2. {self.config['prompt-remove']}")
-        opts.append(f"3. {self.config['prompt-toggle']}")
-        opts.append(f"4. {self.config['prompt-edit']}")
-        opts.append(f"5. {self.config['prompt-load']}")
-        opts.append(f"6. {self.config['prompt-save']}")
+        opts.append(f" 1. {self.config['prompt-add']}")
+        opts.append(f" 2. {self.config['prompt-remove']}")
+        opts.append(f" 3. {self.config['prompt-toggle']}")
+        opts.append(f" 4. {self.config['prompt-edit']}")
+        opts.append(f" 5. {self.config['prompt-load']}")
+        opts.append(f" 6. {self.config['prompt-save']}")
         
         if self.config['debug']:
           opts.append(f"7. Upload")
