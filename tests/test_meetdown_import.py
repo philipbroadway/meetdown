@@ -55,4 +55,4 @@ def test_exported_data_imports_and_exports(tmp_file):
       meetdown.load_from_markdown(tmp_file)
 
       # Verify the loaded data matches the original data
-      assert meetdown.md_data.items() == meetdown.md_data.items()
+      assert meetdown.data.items() == meetdown.data.items()

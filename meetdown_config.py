@@ -17,7 +17,7 @@ class MeetDownConfig:
             "id": "👤",
             "desc": "👤 person",
             "prompt-type": "Option",
-            "prompt-main": "Enter number",
+            "prompt-main": " Enter number",
             "prompt-add": "Add",
             "prompt-remove": "Remove",
             "prompt-toggle": "Toggle",
@@ -32,6 +32,9 @@ class MeetDownConfig:
             "states": [
                 {"⬜": "⬜ todo"},
                 {"✅": "✅ done"},
+                {"🔥":  "🔥 ready-qa"},
+                {"🚫":  "🚫 blocked"},
+                # {"💩:  "💩 trash"},
                 # {"🔴":  "🔴 blocked"},
                 # {"🟡":  "🟡 in-progress"},
                 # {"🟢":  "🟢 ready-review"},
@@ -46,9 +49,7 @@ class MeetDownConfig:
                 # {"🟦":  "🟦 archive"},
                 # {"🟩":  "🟩 ready-merge"},
                 # {"🟨":  "🟨 merge"},
-                # {"🔥":  "🔥 ready-qa"},
-                # {"🚫":  "🚫 blocked"},
-                # {"💩:  "💩 trash"},
+
                
                 # mojii: https://emojidb.org
             ],
@@ -70,11 +71,11 @@ class MeetDownConfig:
     def generate_options(config):
         opts = []
         opts.append(f" 1. {config['prompt-add']}")
-        opts.append(f" 2. {config['prompt-remove']}")
-        opts.append(f" 3. {config['prompt-toggle']}")
-        opts.append(f" 4. {config['prompt-edit']}")
-        opts.append(f" 5. {config['prompt-load']}")
-        opts.append(f" 6. {config['prompt-save']}")
+        opts.append(f" 2. {config['prompt-edit']}")
+        opts.append(f" 3. {config['prompt-load']}")
+        opts.append(f" 4. {config['prompt-save']}")
+        opts.append(f" 5. {config['prompt-remove']}")
+        opts.append(f" 6. {config['prompt-toggle']}")
         
         if config['debug']:
           opts.append(f"7. Upload")
