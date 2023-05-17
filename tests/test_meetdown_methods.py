@@ -30,7 +30,7 @@ def test_preview_returns_list_of_strings(meetdown):
     assert all(isinstance(item, str) for item in result)
 
 def test_choices_of_add_method(meetdown):
-    expected_choices = "1. Add\n2. Edit\n3. Load\n4. Quit & Save\n5. Remove\n6. Topggle"
+    expected_choices = "1. Add\n2. Edit\n3. Load\n4. Topggle\n5. Remove\n6. Quit & Save"
     result = meetdown.generate_options()
     print(expected_choices)
     assert result == expected_choices

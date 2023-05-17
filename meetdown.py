@@ -213,8 +213,8 @@ class MeetDown:
         input_text = input(f"\nNew value: ")
         if input_text == '':
             return None, None, None
-
-        return editable, ticket_or_description, input_text
+        else:
+           return editable, ticket_or_description, input_text
 
     def edit_prompt(self):
       print("\nEditables:\n")
@@ -540,13 +540,13 @@ class MeetDown:
                     self.data = loaded_data
                     self.config = config
             elif selected_option == 4:
-               self.save_to_file()
-               break
+              self.toggle_prompt()
             elif selected_option == 5:
               self.remove_prompt()
-              
             elif selected_option == 6:
-                self.toggle_prompt()
+                self.save_to_file()
+                break
+                
             elif selected_option == 7:
                 # Save states & upload to gist
                 # gist_desc = input("Enter a description for your `gist`: ")
