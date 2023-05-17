@@ -9,13 +9,17 @@
 
 ## Prerequisites
 
-* Python 3 >= 3.6
+* [Python 3+](https://github.com/frontdesk/meetdown/blob/main/python_installation_guide.md)
 
 --or--  
 
 * Docker
 
 ## Getting Started
+
+### Run locally
+
+If you don't have Python installed, follow [Python installation](https://github.com/frontdesk/meetdown/blob/main/python_installation_guide.md) guide.
 
 ```bash
 # Install dependencies
@@ -25,7 +29,7 @@ cd meetdown && pip install -r requirements.txt
 python meetdown.py
 ```
 
-## Docker
+### Run in Docker
 
 Quickstart:
 ```bash
