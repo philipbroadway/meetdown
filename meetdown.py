@@ -1,9 +1,9 @@
-# """
-# ┌┬┐┌─┐┌─┐┌┬┐┌┬┐┌─┐┬ ┬┌┐┌
-# │││├┤ ├┤  │  │││ │││││││
-# ┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
-# ________________________
-# """
+ASCII="""
+┌┬┐┌─┐┌─┐┌┬┐┌┬┐┌─┐┬ ┬┌┐┌
+│││├┤ ├┤  │  │││ │││││││
+┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
+________________________
+"""
 NAME="# meetdown"
 import os, time
 import argparse
@@ -41,13 +41,18 @@ class MeetDown:
         result = []
 
         for entity in self.md_data.keys():
-            
             for category in self.md_data[entity].keys():
                 category_index = 0
                 for item in self.md_data[entity][category]:
-                    result.append({"entity": entity, "category": category, "item": item, "category_index": category_index, "external_ticket": item['external_ticket'], "description": item['description']})
+                    result.append({
+                        "entity": entity, 
+                        "category": category, 
+                        "item": item, 
+                        "category_index": category_index, 
+                        "external_ticket": item['external_ticket'], 
+                        "description": item['description']
+                      })
                 category_index += 1
-
         return result
 
     def generate_options(self):
@@ -70,7 +75,7 @@ class MeetDown:
       parser = argparse.ArgumentParser(description='Process command-line arguments.')
       parser.add_argument('--title', type=str, default=f"meetdown-{now}", help='Title (default: aws-p13.md)')
       parser.add_argument('--entities', type=str, default=whoiam, help='Comma separated people or entities (example: pike13,aws-sales)')
-      parser.add_argument('--out', type=str, default=MeetDownUtils.cwd(), help='Save directory path (default: empty string)')
+      parser.add_argument('--out', type=str, default=MeetDownUtils.pwd(), help='Save directory path (default: empty string)')
       args = parser.parse_args()
 
       if args.entities:
@@ -309,23 +314,10 @@ class MeetDown:
 
         if not save_location.endswith(".md"):
             save_location += ".md"
-
-        self.write( save_location)
-        with open(f"{save_location}", "w") as file:
-            interval = 0
-            for entity, data in self.md_data.items():
-                new_line = "\n" if interval > 0 else ""
-                file.write(f"{new_line}## {entity}\n\n")
-                file.write(f"| Category | {self.external().capitalize()} Ticket | Description |\n")
-                file.write(f"{self.config['table-separator']}\n")
-                
-                for category, items in data.items():
-                      for item in items:
-                          external_ticket = self.toMarkdownExternalURL(item.get("external_ticket")) if item.get("external_ticket") else ""
-                          file.write(f"| {category} | {external_ticket} | {item['description']} |\n")
-                file.write("\n\n")
-                interval += 1
-        print(f"\n💾:\n{save_location}\n")
+        self.ensure_default_states_items_exist_in_md_data()
+        
+        self.write(save_location, False)
+        print(f"\n💾:\nfile://{save_location}\n")
 
     def save_to_redis(self):
         # Prompt user for Redis folder and filename
@@ -399,7 +391,9 @@ class MeetDown:
         return data, config
     
     def update_data_item_categories(self, data, category):
-        # print(f"\n-------before: {data}------")
+        if self.config['debug']:
+          print(f"\n[before]update_data_item_categories:------\n\ndata: {data}")
+          print(f"\n\category: {category}")
         keys = [category]
         for entity in data.keys():
             entitity_keys = []
@@ -410,7 +404,9 @@ class MeetDown:
             for key in unique_keys:
                 if key not in data[entity]:
                     data[entity][key] = []
-        # print(f"\n-------after: {data}------")
+        if self.config['debug']:
+          print(f"\n[fater]update_data_item_categories:------\n\ndata: {data}")
+          print(f"\n\category: {category}")
 
     def kebob(self, text):
         return text.lower().replace(" ", "-")
@@ -422,14 +418,12 @@ class MeetDown:
             return f"[{external_ticket}][{ref}]"
         return ""
 
-
     def createInternalReferenceLink(self, item):
         external_ticket = item["external_ticket"]
         if external_ticket:
             ref = self.kebob(external_ticket + "-ref")
             return f"[{ref}]: {self.config['external']['url']}{external_ticket}"
         return ""
-
 
     def write(self, filename, buhbye=False):
         with open(filename, "w") as file:
@@ -439,7 +433,7 @@ class MeetDown:
 
         if buhbye:
             print(f"\nkthx👋")
-        print(f"\n💾: {os.getcwd()}/{self.config['tmp']}\n")
+        print(f"\n💾: file://{MeetDownUtils.pwd()}/{self.config['tmp']}\n")
 
 
     def ensure_default_states_items_exist_in_md_data(self):
@@ -463,7 +457,7 @@ class MeetDown:
             result.append(f"{new_line}## {entity}")
             if not compact:
                 result.append("\n")
-                # result.append("\n")
+                result.append("\n")
             result.append(f"{spacer}| Category | {self.external().capitalize()} Ticket | Description |\n")
             result.append(f"{spacer}{self.config['table-separator']}\n")
 
@@ -563,9 +557,10 @@ class MeetDown:
                 break
             elif selected_option == 7:
                 # Save states & upload to gist
-                gist_desc = input("Enter a description for your `gist`: ")
-                self.write( self.config['tmp'])
+                # gist_desc = input("Enter a description for your `gist`: ")
+                # self.write( self.config['tmp'])
                 # upload_to_gist(self.config['tmp'], gist_desc)
+                print("Not implemented yet")
             else:
                 print(f"`${selected_option}` is an invalid option. \nEnter any number 1-{2*states_length+5} and hit return or hit return again to stash & exit")
     def main(self):
@@ -574,7 +569,11 @@ class MeetDown:
         # Check if the temporary file exists
         if os.path.exists(self.config['tmp']):
             # If it exists, ask the user if they want to load it
-            load_previous = input(f"Previous session detected. {self.config['tmp']}\nLoad it? (y/n): ").lower() == 'y'
+            self.utils.clear_screen()
+            print(f"{ASCII}\n")
+            restore_file_desc = f"📌 {MeetDownUtils.pwd()}{self.config['tmp']}"
+            load_previous = input(f"[n]\tNew MeetDown\n[enter]\tor enter to resume: ")  == ""
+            print(f"load_previous: {load_previous}")
             if load_previous:
                 loaded_data, config = self.load_from_markdown(self.config['tmp'])  
                 if self.config['debug']:
@@ -583,7 +582,6 @@ class MeetDown:
                 if loaded_data is not None and config is not None:
                     self.md_data = loaded_data
                     self.config = config
-
                 else:
                     # Display an error message and continue with default data
                     print("Failed to load data from file. Continuing with default configuration.")
