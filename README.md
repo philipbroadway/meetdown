@@ -35,7 +35,7 @@ cd meetdown && docker-compose run meetdown
 
 ## Run In VSCode
 
-[![Run with Docker](https://img.shields.io/badge/run%20with-docker-blue.svg)](vscode://docker-compose%2Fup?{ "cwd": "${workspaceFolder}" })
+[![Open in VSCode](https://img.shields.io/badge/run%20with-docker-blue.svg)](vscode://docker-compose%2Fup?data={ "cwd": "${workspaceFolder}" })
 
 ## Testing
 
