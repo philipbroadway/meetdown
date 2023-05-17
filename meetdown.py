@@ -4,7 +4,7 @@ ASCII="""
 ┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
 ________________________
 """
-NAME="# meetdown"
+NAME="#"
 import os, time
 import argparse
 import datetime
@@ -23,51 +23,11 @@ class MeetDown:
     def __init__(self, config):
         self.config = config
         self.utils = MeetDownUtils(config)
-        self.md_data = {}
+        self.data = {}
         redis_host = os.environ.get('REDIS_HOST')
         redis_port = os.environ.get('REDIS_PORT')
         redis_password = os.environ.get('REDIS_PASSWORD')
         self.redis_client = redis.Redis(host=redis_host, port=redis_port, password=redis_password)
-
-    def status_types(self):
-        types = []
-        for obj in self.config['states']:
-            for key in obj:
-                types.append(key)
-        return types
-
-    def editables(self):
-        
-        result = []
-
-        for entity in self.md_data.keys():
-            for category in self.md_data[entity].keys():
-                category_index = 0
-                for item in self.md_data[entity][category]:
-                    result.append({
-                        "entity": entity, 
-                        "category": category, 
-                        "item": item, 
-                        "category_index": category_index, 
-                        "external_ticket": item['external_ticket'], 
-                        "description": item['description']
-                      })
-                category_index += 1
-        return result
-
-    def generate_options(self):
-        opts = []
-        opts.append(f" 1. {self.config['prompt-add']}")
-        opts.append(f" 2. {self.config['prompt-remove']}")
-        opts.append(f" 3. {self.config['prompt-toggle']}")
-        opts.append(f" 4. {self.config['prompt-edit']}")
-        opts.append(f" 5. {self.config['prompt-load']}")
-        opts.append(f" 6. {self.config['prompt-save']}")
-        
-        if self.config['debug']:
-          opts.append(f"7. Upload")
-        
-        return "\n".join(["\n".join(opts)])
 
     def parse_arguments(self):
       now = self.utils.now()
@@ -82,6 +42,47 @@ class MeetDown:
           args.entities = args.entities.split(',')
       return args
 
+    def states(self):
+        return ["⚫","⚪","🔵","🟡","🟢","🔴"]# off, on, busy, warn, done, error
+
+    def status_types(self):
+        types = []
+        for obj in self.config['states']:
+            for key in obj:
+                types.append(key)
+        return types
+    
+    def notify(self, message):
+        if os.name == 'posix' and os.uname().sysname == 'Darwin':
+            try:
+                from pync import Notifier
+            except ImportError:
+                exit(1)
+
+            # Need to know absolute path to script & mardown file
+            # Notifier.notify('Is ? still ?', execute=python absolute/path/to/meetdown meetdown/file/path)'
+            Notifier.notify(f"{message}")
+
+        # else:
+        #     print("This method is intended to run on macOS only.")
+
+    def editables(self):
+        result = []
+        for entity in sorted(self.data.keys()):
+            for category in self.data[entity].keys():
+                category_index = 0
+                for item in self.data[entity][category]:
+                    result.append({
+                        "entity": entity, 
+                        "category": category, 
+                        "item": item, 
+                        "category_index": category_index, 
+                        "external_ticket": item['external_ticket'], 
+                        "description": item['description']
+                      })
+                category_index += 1
+        return result
+
     def external(self):
         return self.config['external']['id']
 
@@ -91,7 +92,7 @@ class MeetDown:
     def toggle_prompt(self):
         # First, create a flat list of all items
         all_items = []
-        for entity, data in self.md_data.items():
+        for entity, data in sorted(self.data.items()):
             for category, items in data.items():
                 for item in items:
                     all_items.append((entity, category, item))
@@ -99,12 +100,13 @@ class MeetDown:
         if not all_items:
             print("No items to toggle.")
             return
+        spacer = " "
 
         # Now, print all items and let the user select one
         for i, (entity, category, item) in enumerate(all_items, start=1):
-            print(f"{i}. {entity} - {category} - {item['description']}")
+            print(f"{spacer}{i}. {entity}-{category}-{item['description']}")
         
-        item_index = input(f"Toggle which item?: ")
+        item_index = input(f"\nToggle which item?: ")
         if item_index == '':  # if input is empty, return to main menu
             return
         item_index = int(item_index) - 1
@@ -124,23 +126,23 @@ class MeetDown:
         self.toggle_status(entity, from_category, to_category, item)
 
     def toggle_status(self, entity, from_category, to_category, item):
-        if to_category not in self.md_data[entity]:
-          self.md_data[entity][to_category] = []
-        if self.md_data[entity][from_category]:
-          self.md_data[entity][from_category].remove(item)
-        self.md_data[entity][to_category].append(item)
+      if to_category not in self.data[entity]:
+          self.data[entity][to_category] = []
+      if self.data[entity][from_category]:
+          self.data[entity][from_category].remove(item)
+      self.data[entity][to_category].append(item)
 
     def add_entity(self, entity):
-        self.md_data[entity] = {list(states.keys())[0]: [] for states in self.config['states']}
+        self.data[entity] = {list(states.keys())[0]: [] for states in self.config['states']}
         self.config['status-types'].append(entity)
-        if entity not in self.md_data:
-            self.md_data[entity] = {}
+        if entity not in self.data:
+            self.data[entity] = {}
             for category in self.config['states']:
-                self.md_data[entity][list(category.keys())[0]] = []
+                self.data[entity][list(category.keys())[0]] = []
 
     def remove_entity(self, entity):
-        if entity in self.md_data:
-          del self.md_data[entity]
+        if entity in self.data:
+          del self.data[entity]
 
     def add_prompt(self):
         # Get the list of all types of items
@@ -151,7 +153,7 @@ class MeetDown:
         print(f"{self.config['separator-2']}\n\n{self.config['prompt-add']}\n")
         
         for i, item_type in enumerate(item_types, start=1):
-            for n, entity in enumerate(self.md_data, start=1):
+            for n, entity in enumerate(sorted(self.data), start=1):
               item_count += 1
               print(f"{item_count}. {entity}-{item_type}")
               items.append({"index": item_count, "entity": entity, "item_type": item_type})
@@ -164,7 +166,7 @@ class MeetDown:
             return
         
         if int(item_type_index) -1 > len(items):
-          print(f"Please select a number between 1 and {len(items)}")
+          print(f"{self.config['invalid']}\nShould be between 1 and {len(items)}")
           return
 
         item = items[int(item_type_index) -1]
@@ -195,7 +197,7 @@ class MeetDown:
           print(f"New {selected_item_type} item added for {selected_entity}.")
     
     def add_item(self, entity, item_type, external_ticket, description):
-        self.md_data[entity][item_type].append({
+        self.data[entity][item_type].append({
             "external_ticket": external_ticket,
             "description": description
     })
@@ -214,12 +216,11 @@ class MeetDown:
 
         return editable, ticket_or_description, input_text
 
-        
     def edit_prompt(self):
       print("\nEditables:\n")
       for i, editable in enumerate(self.editables(), start=1):
-          ticket = f"{editable['external_ticket']}" if editable['external_ticket'] else "N/A"
-          print(f"{i}. {editable['category']} | {editable['entity']} | {ticket} | {editable['description']}")
+          ticket = f"-{editable['external_ticket']}" if editable['external_ticket'] else ""
+          print(f"{i}. {editable['entity']}-{editable['category']}{ticket}-{editable['description']}")
 
       selected_index = input("\nSelect an editable item by entering the number: ")
       if not selected_index.isdigit():
@@ -237,14 +238,14 @@ class MeetDown:
       return self.edit(selected_editable, ticket_or_description, input_text)
 
     def edit(self, editable, option, new_value):
-      data = self.md_data
+      data = self.data
       option_key = 'external_ticket' if option == 1 else 'description'
       print(f"Edit {option_key}: {editable[option_key]} -> {new_value}")
       for type in data[editable['entity']]:
           for i, item in enumerate(data[editable['entity']][type]):
               if item['external_ticket'] == editable['external_ticket'] and item['description'] == editable['description']:
                   print(f"✅  {editable['entity']} - {type} - {new_value} -> {data[editable['entity']][type][i][option_key]}")
-                  self.md_data[editable['entity']][type][i][option_key] = new_value
+                  self.data[editable['entity']][type][i][option_key] = new_value
                   print(f"✅ {data[editable['entity']][type][i][option_key]}")
                   continue
       return data, self.config
@@ -253,10 +254,12 @@ class MeetDown:
       # Prepare a list of all items, each entity and each entity's category items
       items = []
       item_count = 0
-      for entity, data in self.md_data.items():
+      padding = " "
+      print(f"\n{padding}{self.config['prompt-remove']}:\n")
+      for entity, data in sorted(self.data.items()):
           # Append each entity to the list
           item_count += 1
-          print(f"{item_count}. {self.config['id']} {entity}")
+          print(f"{padding}{padding}{item_count}. {self.config['id']} {entity}")
           items.append({
               "index": item_count,
               "entity": entity,
@@ -267,7 +270,7 @@ class MeetDown:
           for category, category_items in data.items():
               for category_index, item in enumerate(category_items):
                   item_count += 1
-                  print(f"{item_count}. {category} for {entity} - {item['description']}")
+                  print(f"{padding}{padding}{item_count}. {entity}-{category}-{item['description']}")
                   items.append({
                       "index": item_count,
                       "entity": entity,
@@ -278,11 +281,11 @@ class MeetDown:
                   })
 
       # Ask the user to select an item or entity to remove
-      item_index = input("Enter the number of the item to remove: ")
+      item_index = input("\nEnter the number of the item to remove: ")
       if item_index == '' or  item_index.isdigit() == False:
           return
       if self.config['debug']:
-        print(f"data: {self.md_data}")
+        print(f"data: {self.data}")
       item_index = int(item_index) - 1
       selected_item = items[item_index]
 
@@ -292,9 +295,9 @@ class MeetDown:
           self.remove_item(selected_item['entity'], selected_item['category'], selected_item['category_index'])
 
     def remove_item(self, entity, item_type, item_index):
-        if self.md_data[entity][item_type][item_index] == None:
+        if self.data[entity][item_type][item_index] == None:
             return
-        self.md_data[entity][item_type].pop(item_index)
+        self.data[entity][item_type].pop(item_index)
 
     def select_entity(self):
         for i, entity in enumerate(self.config['status-types'], start=1):
@@ -314,10 +317,8 @@ class MeetDown:
 
         if not save_location.endswith(".md"):
             save_location += ".md"
-        self.ensure_default_states_items_exist_in_md_data()
-        
+        self.ensure_default_states_items_exist_in_data()
         self.write(save_location, False)
-        print(f"\n💾:\nfile://{save_location}\n")
 
     def save_to_redis(self):
         # Prompt user for Redis folder and filename
@@ -326,7 +327,7 @@ class MeetDown:
 
         # Save the Markdown data to Redis
         key = f"{folder_name}:{filename}"
-        self.redis_client.set(key, self.md_data)
+        self.redis_client.set(key, self.data)
 
         print(f"Markdown data saved to Redis: {key}")
 
@@ -377,9 +378,9 @@ class MeetDown:
         markdown_data = self.redis_client.get(selected_key)
 
         if markdown_data:
-            self.md_data = markdown_data.decode("utf-8")
+            self.data = markdown_data.decode("utf-8")
             print(f"\nMarkdown data for key '{selected_key}':\n")
-            print(self.md_data)
+            print(self.data)
         else:
             print("Markdown data not found.")
 
@@ -387,7 +388,7 @@ class MeetDown:
         parser = MeetDownParser(self.config)
         data, config = parser.load_from_markdown(file_path)
         self.config = config
-        self.md_data = data
+        self.data = data
         return data, config
     
     def update_data_item_categories(self, data, category):
@@ -428,38 +429,42 @@ class MeetDown:
     def write(self, filename, buhbye=False):
         with open(filename, "w") as file:
             
-            for line in self.preview(self.md_data):
+            for line in self.preview(self.data):
                 file.write(line)
-
         if buhbye:
             print(f"\nkthx👋")
-        print(f"\n💾: file://{MeetDownUtils.pwd()}/{self.config['tmp']}\n")
+        print(f"\n💾: file:/{MeetDownUtils.pwd()}/{filename}\n")
 
-
-    def ensure_default_states_items_exist_in_md_data(self):
+    def ensure_default_states_items_exist_in_data(self):
         for record in self.config['status-types']:
-            for entity in self.md_data.keys():
-                if record not in self.md_data[entity]:
-                    self.md_data[entity][record] = []
+            for entity in self.data.keys():
+                if record not in self.data[entity]:
+                    self.data[entity][record] = []
 
-    def preview(self, md_data, compact=False):
+    def preview(self, data, compact=False):
         now = self.utils.now()
         spacer = " " if compact else ""
         result =[]
         if compact:
-          result = [f"{NAME} > {now}", ""]
+          result = [f" {self.states()[1]} {NAME} MeetDown > {now}", ""]
         else:
-          result = [f"{NAME} @ {now}", "\n\n"]
+          result = [f"{NAME} MeetDown @ {now}", "\n\n"]
         interval = 0
         refs = []
-        for entity, data in md_data.items():
+        for entity, data in sorted(data.items()):
             new_line = "" if interval > 0 else ""
             result.append(f"{new_line}## {entity}")
             if not compact:
                 result.append("\n")
                 result.append("\n")
-            result.append(f"{spacer}| Category | {self.external().capitalize()} Ticket | Description |\n")
-            result.append(f"{spacer}{self.config['table-separator']}\n")
+            has_items = False
+            for category, items in data.items():
+                if len(items) > 0:
+                    has_items = True
+                    break
+            if has_items or not compact:
+              result.append(f"{spacer}| State | {self.external().capitalize()} Ticket | Description |\n")
+              result.append(f"{spacer}{self.config['table-separator']}\n")
 
             for category, items in data.items():
                   for item in items:
@@ -479,53 +484,39 @@ class MeetDown:
                 result.append("### References\n\n")
                 uniq_refs = list(set(refs))
                 for ref in uniq_refs:
-                  result.append(f"{ref}\n")
+                    result.append(f"{ref}\n")
         return result
     
-    def notify(self, message):
-        if os.name == 'posix' and os.uname().sysname == 'Darwin':
-            try:
-                from pync import Notifier
-            except ImportError:
-                exit(1)
-
-            # Need to know absolute path to script & mardown file
-            # Notifier.notify('Is ? still ?', execute=python absolute/path/to/meetdown meetdown/file/path)'
-            Notifier.notify(f"{message}")
-
-        # else:
-        #     print("This method is intended to run on macOS only.")
-    
-    def render_terminal_preview(self, config, md_data, compact=False):
+    def render_terminal_preview(self, config, data, compact=False):
         result = []
-        previews = self.preview(md_data, True)
+        previews = self.preview(data, True)
         for preview in previews:
                 result.append(preview.replace("\n",""))
 
         if self.config['debug']:
-            result.append(f"{self.config['separator-1']}\n\nOptions:\n\n{self.generate_options()}\n") 
+            result.append(f"{self.config['separator-1']}\n\nOptions:\n\n{MeetDownConfig.generate_options(self.config)}\n") 
         else:
-            result.append(f"Options:\n\n{self.generate_options()}\n")
+            result.append(f"Options:\n\n{MeetDownConfig.generate_options(self.config)}\n")
         return result
 
-    def meetdown(self, args, config, md_data):
-        self.md_data = md_data
+    def meetdown(self, args, config, data):
+        self.data = data
         self.config['status-types'] = args.entities
-        self.ensure_default_states_items_exist_in_md_data()
+        self.ensure_default_states_items_exist_in_data()
 
         while True:
             os.system('clear')
             # Preview
             
-            previews = self.render_terminal_preview(self.config, self.md_data, True)
+            previews = self.render_terminal_preview(self.config, self.data, True)
             for preview in previews:
                 print(preview)
-            self.ensure_default_states_items_exist_in_md_data()
+            self.ensure_default_states_items_exist_in_data()
             selected_option = input(f"{self.config['prompt-main']}: ")
             
             # If user hits return with no input, kbai
             if not selected_option:
-                self.ensure_default_states_items_exist_in_md_data()
+                self.ensure_default_states_items_exist_in_data()
                 self.write(self.config['tmp'], True)
                 break
             
@@ -539,22 +530,23 @@ class MeetDown:
             if selected_option == 1:
                 self.add_prompt()
             elif selected_option == 2:
-                self.remove_prompt()
+                self.edit_prompt()
             elif selected_option == 3:
-                self.toggle_prompt()
+                file_path = input(f"{self.config['prompt-save-location']}: ")
+                if not file_path:
+                    continue
+                loaded_data, config = self.load_from_markdown(file_path)
+                if loaded_data is not None and config is not None:
+                    self.data = loaded_data
+                    self.config = config
             elif selected_option == 4:
-               self.edit_prompt()
+               self.save_to_file()
+               break
             elif selected_option == 5:
-              file_path = input(f"{self.config['prompt-save-location']}: ")
-              if not file_path:
-                  continue
-              loaded_data, config = self.load_from_markdown(file_path)
-              if loaded_data is not None and config is not None:
-                  self.md_data = loaded_data
-                  self.config = config
+              self.remove_prompt()
+              
             elif selected_option == 6:
-                self.save_to_file()
-                break
+                self.toggle_prompt()
             elif selected_option == 7:
                 # Save states & upload to gist
                 # gist_desc = input("Enter a description for your `gist`: ")
@@ -568,10 +560,9 @@ class MeetDown:
 
         # Check if the temporary file exists
         if os.path.exists(self.config['tmp']):
-            # If it exists, ask the user if they want to load it
             self.utils.clear_screen()
             print(f"{ASCII}\n")
-            restore_file_desc = f"📌 {MeetDownUtils.pwd()}{self.config['tmp']}"
+
             load_previous = input(f"[n]\tNew MeetDown\n[enter]\tor enter to resume: ")  == ""
             print(f"load_previous: {load_previous}")
             if load_previous:
@@ -580,13 +571,13 @@ class MeetDown:
                   print(f'loaded_data: {loaded_data} config: {config}')
                 # Load the data from the specified file
                 if loaded_data is not None and config is not None:
-                    self.md_data = loaded_data
+                    self.data = loaded_data
                     self.config = config
                 else:
                     # Display an error message and continue with default data
                     print("Failed to load data from file. Continuing with default configuration.")
         self.utils.clear_screen()
-        self.meetdown(args, self.config, self.md_data)
+        self.meetdown(args, self.config, self.data)
 
 if __name__ == "__main__":
     meetdown = MeetDown(MeetDownConfig.default_config())

@@ -17,7 +17,7 @@ class MeetDownConfig:
             "id": "👤",
             "desc": "👤 person",
             "prompt-type": "Option",
-            "prompt-main": "Enter number",
+            "prompt-main": " Enter number",
             "prompt-add": "Add",
             "prompt-remove": "Remove",
             "prompt-toggle": "Toggle",
@@ -26,18 +26,31 @@ class MeetDownConfig:
             "prompt-save": "Save & Quit",
             "prompt-save-location": "Enter the path of the Markdown file to load",
             "external": {
-                "id": "foo",
+                "id": "jira",
                 "url": "https://frontdeskhq.atlassian.net/jira/software/c/projects/FD/boards/7/backlog?view=detail&selectedIssue="
             },
             "states": [
                 {"⬜": "⬜ todo"},
                 {"✅": "✅ done"},
+                {"🔥":  "🔥 ready-qa"},
+                {"🚫":  "🚫 blocked"},
+                # {"💩:  "💩 trash"},
                 # {"🔴":  "🔴 blocked"},
                 # {"🟡":  "🟡 in-progress"},
                 # {"🟢":  "🟢 ready-review"},
                 # {"🟣":  "🟣 review"},
                 # {"🟤":  "🟤 ready-test"},
                 # {"🔵":  "🔵 test"},
+                # {"⚫":  "⚫ ready-deploy"},
+                # {"⚪":  "⚪ deploy"},
+                # {"🟠":  "🟠 ready-release"},
+                # {"🟣":  "🟣 release"},
+                # {"🟤":  "🟤 ready-archive"},
+                # {"🟦":  "🟦 archive"},
+                # {"🟩":  "🟩 ready-merge"},
+                # {"🟨":  "🟨 merge"},
+
+               
                 # mojii: https://emojidb.org
             ],
             'status-types': [],
@@ -53,3 +66,18 @@ class MeetDownConfig:
         }
         res["table-separator"] = f"| {res['table-header-divider']} | {res['table-header-divider']} | {res['table-header-divider']} |"
         return res
+    
+    @staticmethod
+    def generate_options(config):
+        opts = []
+        opts.append(f" 1. {config['prompt-add']}")
+        opts.append(f" 2. {config['prompt-edit']}")
+        opts.append(f" 3. {config['prompt-load']}")
+        opts.append(f" 4. {config['prompt-save']}")
+        opts.append(f" 5. {config['prompt-remove']}")
+        opts.append(f" 6. {config['prompt-toggle']}")
+        
+        if config['debug']:
+          opts.append(f"7. Upload")
+        
+        return "\n".join(["\n".join(opts)])
