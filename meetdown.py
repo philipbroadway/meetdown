@@ -134,7 +134,7 @@ class MeetDown:
 
     def add_entity(self, entity):
         self.data[entity] = {list(states.keys())[0]: [] for states in self.config['states']}
-        self.config['status-types'].append(entity)
+        self.config['imported_states'].append(entity)
         if entity not in self.data:
             self.data[entity] = {}
             for category in self.config['states']:
@@ -300,7 +300,7 @@ class MeetDown:
         self.data[entity][item_type].pop(item_index)
 
     def select_entity(self):
-        for i, entity in enumerate(self.config['status-types'], start=1):
+        for i, entity in enumerate(self.config['imported-states'], start=1):
             print(f"{i}. {entity}")
         entity_index = input(f"Select a {self.config['desc']} by entering the number, or press Enter to return to main menu: ")
         if entity_index == '':  # if entity input is empty, return to main menu
@@ -436,7 +436,7 @@ class MeetDown:
         print(f"\n💾: file:/{MeetDownUtils.pwd()}/{filename}\n")
 
     def ensure_default_states_items_exist_in_data(self):
-        for record in self.config['status-types']:
+        for record in self.config['imported-states']:
             for entity in self.data.keys():
                 if record not in self.data[entity]:
                     self.data[entity][record] = []
@@ -501,7 +501,7 @@ class MeetDown:
 
     def meetdown(self, args, config, data):
         self.data = data
-        self.config['status-types'] = args.entities
+        self.config['imported-states'] = args.entities
         self.ensure_default_states_items_exist_in_data()
 
         while True:
