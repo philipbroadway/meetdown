@@ -65,7 +65,8 @@ class MeetDownParser:
             for key in keys:
                 if key not in data[entity].keys():
                     data[entity][key] = []
-        print(f"setup_defaults: {data}")
+        if self.config['debug']:
+          print(f"setup_defaults: {data}")
         return data, config
 
 
