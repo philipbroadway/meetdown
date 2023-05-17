@@ -1,4 +1,4 @@
-# NAME="""
+# """
 # ┌┬┐┌─┐┌─┐┌┬┐┌┬┐┌─┐┬ ┬┌┐┌
 # │││├┤ ├┤  │  │││ │││││││
 # ┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
@@ -68,16 +68,15 @@ class MeetDown:
 
     def parse_arguments(self):
       now = self.utils.now()
+      whoiam = self.utils.whoami()
       parser = argparse.ArgumentParser(description='Process command-line arguments.')
-      parser.add_argument('--title', type=str, default=f"standup-{now}", help='Title (default: aws-p13.md)')
-      parser.add_argument('--entities', type=str, default='philipbroadway', help='List of entities separated by commas (example: pike13,aws-sales)')
-      parser.add_argument('--out', type=str, default="", help='Save directory path (default: empty string)')
-
+      parser.add_argument('--title', type=str, default=f"meetdown-{now}", help='Title (default: aws-p13.md)')
+      parser.add_argument('--entities', type=str, default=whoiam, help='Comma separated people or entities (example: pike13,aws-sales)')
+      parser.add_argument('--out', type=str, default=MeetDownUtils.cwd(), help='Save directory path (default: empty string)')
       args = parser.parse_args()
 
       if args.entities:
           args.entities = args.entities.split(',')
-
       return args
 
     def external(self):
@@ -205,8 +204,8 @@ class MeetDown:
             return None, None, None
         ticket_or_description = 1 if int(ticket_or_description) == 1 else 2
         ticket_key = 'external_ticket' if ticket_or_description == 1 else 'description'
-        print(f"Current:\n {editable[ticket_key]}\n")
-        input_text = input(f"\nNew value:")
+        print(f"\nCurrent value: {editable[ticket_key]}")
+        input_text = input(f"\nNew value: ")
         if input_text == '':
             return None, None, None
 
@@ -396,13 +395,11 @@ class MeetDown:
 
     def load_from_markdown(self, file_path):
         parser = MeetDownParser(self.config)
-        d = {}
-        c = {}
-        d, c = parser.load_from_markdown(file_path)
-        self.config = c
-        self.md_data = d
-
-        return d, c
+        data, config = parser.load_from_markdown(file_path)
+        self.config = config
+        self.md_data = data
+        return data, config
+    
     def update_data_item_categories(self, data, category):
         # print(f"\n-------before: {data}------")
         keys = [category]
@@ -452,16 +449,15 @@ class MeetDown:
             for entity in self.md_data.keys():
                 if record not in self.md_data[entity]:
                     self.md_data[entity][record] = []
-            # if record not in self.md_data:
-            #     self.md_data[record] = {list(states.keys())[0]: [] for states in self.config['states']}
 
     def preview(self, md_data, compact=False):
         now = self.utils.now()
+        spacer = " " if compact else ""
         result =[]
         if compact:
           result = [f"{NAME} > {now}", ""]
         else:
-          result = [f"{NAME}", f"\n> {now}", "\n\n"]
+          result = [f"", f"\n> {now}", "\n\n"]
         interval = 0
         refs = []
         for entity, data in md_data.items():
@@ -469,9 +465,9 @@ class MeetDown:
             result.append(f"{new_line}## {entity}")
             if not compact:
                 result.append("\n")
-                result.append("\n")#For `valid` markdown
-            result.append(f"| Category | {self.external().capitalize()} Ticket | Description |\n")
-            result.append("|----------|-------------|-------------|\n")
+                result.append("\n")
+            result.append(f"{spacer}| Category | {self.external().capitalize()} Ticket | Description |\n")
+            result.append(f"{spacer}{self.config['table-separator']}\n")
 
             for category, items in data.items():
                   for item in items:
@@ -481,15 +477,15 @@ class MeetDown:
                         ticket = f"[{item['external_ticket']}]" if compact else external_ticket
                         if self.config['debug']:
                             print(f"external_ticket: {external_ticket} item: {item}")
-                        result.append(f"| {category} | {ticket} | {item['description']} |\n")
+                        result.append(f"{spacer}| {category} | {ticket} | {item['description']} |\n")
                       else:
-                        result.append(f"| {category} |  | {item['description']} |\n")
+                        result.append(f"{spacer}| {category} |  | {item['description']} |\n")
             result.append("\n")
             interval += 1
         if len(refs) > 0:
-            result.append("### References\n\n")
-            uniq_refs = list(set(refs))
             if not compact:
+                result.append("### References\n\n")
+                uniq_refs = list(set(refs))
                 for ref in uniq_refs:
                   result.append(f"{ref}\n")
         return result
@@ -507,6 +503,18 @@ class MeetDown:
 
         # else:
         #     print("This method is intended to run on macOS only.")
+    
+    def render_terminal_preview(self, config, md_data, compact=False):
+        result = []
+        previews = self.preview(md_data, True)
+        for preview in previews:
+                result.append(preview.replace("\n",""))
+
+        if self.config['debug']:
+            result.append(f"{self.config['separator-1']}\n\nOptions:\n\n{self.generate_options()}\n") 
+        else:
+            result.append(f"Options:\n\n{self.generate_options()}\n")
+        return result
 
     def meetdown(self, args, config, md_data):
         self.md_data = md_data
@@ -516,15 +524,10 @@ class MeetDown:
         while True:
             os.system('clear')
             # Preview
-            previews = self.preview(self.md_data, True)
+            
+            previews = self.render_terminal_preview(self.config, self.md_data, True)
             for preview in previews:
-                print(preview.replace("\n",""))## We dont want to show \n only used for written file
-
-            # Options
-            if self.config['debug']:
-                print(f"{self.config['separator-1']}\n\nOptions:\n\n{self.generate_options()}\n") 
-            else:
-                print(f"Options:\n\n{self.generate_options()}\n") 
+                print(preview)
             self.ensure_default_states_items_exist_in_md_data()
             selected_option = input(f"{self.config['prompt-main']}: ")
             
@@ -551,6 +554,8 @@ class MeetDown:
                self.edit_prompt()
             elif selected_option == 5:
               file_path = input(f"{self.config['prompt-save-location']}: ")
+              if not file_path:
+                  return
               loaded_data, config = self.load_from_markdown(file_path)
               if loaded_data is not None and config is not None:
                   self.md_data = loaded_data

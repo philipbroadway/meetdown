@@ -1,6 +1,7 @@
 import os, time
 import datetime
 import shutil
+import getpass
 from meetdown_config import MeetDownConfig
 class MeetDownUtils:
     
@@ -24,3 +25,10 @@ class MeetDownUtils:
     def timeout(self, delay):
         time.sleep(delay)
         return
+    
+    def whoami(self):
+        return getpass.getuser()
+    
+    @staticmethod
+    def cwd():
+        return os.getcwd()
