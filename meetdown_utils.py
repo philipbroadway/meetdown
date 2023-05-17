@@ -30,5 +30,5 @@ class MeetDownUtils:
         return getpass.getuser()
     
     @staticmethod
-    def cwd():
+    def pwd():
         return os.getcwd()

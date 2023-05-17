@@ -26,7 +26,7 @@ class MeetDownConfig:
             "prompt-save": "Save & Quit",
             "prompt-save-location": "Enter the path of the Markdown file to load",
             "external": {
-                "id": "jira",
+                "id": "foo",
                 "url": "https://frontdeskhq.atlassian.net/jira/software/c/projects/FD/boards/7/backlog?view=detail&selectedIssue="
             },
             "states": [
