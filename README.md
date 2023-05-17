@@ -10,26 +10,26 @@
 ## Prerequisites
 
 * Python 3 >= 3.6
-* panflute
-* bs4
-* redis
-* pytest 
 
-`--or--` 
+--or--  
 
 * Docker
 
 ## Getting Started
 
 ```bash
-cd markdown && python meetdown.py
+# Install dependencies
+cd meetdown && pip install -r requirements.txt
+
+# Running app
+python meetdown.py
 ```
 
 ## Docker
 
 Quickstart:
 ```bash
-cd markdown && docker-compose run meetdown
+cd meetdown && docker-compose run meetdown
 
 ```
 

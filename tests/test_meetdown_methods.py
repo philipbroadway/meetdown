@@ -24,12 +24,13 @@ def category(root, category="Category 1"):
     return root
 
 def test_preview_returns_list_of_strings(meetdown):
-    result = meetdown.preview(single_entity_single_item_with_external())
+    d = single_entity_single_item_with_external()
+    result = meetdown.preview(d)
     assert isinstance(result, list)
     assert all(isinstance(item, str) for item in result)
 
 def test_choices_of_add_method(meetdown):
-    expected_choices = "1. Add\n2. Remove\n3. Toggle\n4. Load\n5. Save & Quit"
+    expected_choices = "1. Add\n2. Remove\n3. Toggle\n4. Edit\n5. Load\n6. Save & Quit"
     result = meetdown.generate_options()
     print(expected_choices)
     assert result == expected_choices
@@ -160,7 +161,7 @@ def test_remove_entity(meetdown):
     # Verify that "Entity 1" has been removed
     assert "Entity 1" not in meetdown.md_data
 
-def test_ensure_default_ctx_items_exist_in_md_data(meetdown):
+def test_ensure_default_states_items_exist_in_md_data(meetdown):
     # Set up initial data with missing ctx items
     meetdown.md_data = {
         "Entity 1": {
@@ -173,8 +174,11 @@ def test_ensure_default_ctx_items_exist_in_md_data(meetdown):
     }
 
     # Ensure default ctx items exist
-    meetdown.ensure_default_ctx_items_exist_in_md_data()
+    meetdown.ensure_default_states_items_exist_in_md_data()
 
     # Verify that missing ctx items have been added
-    assert "✅" in meetdown.md_data["Entity 1"]
+
     assert meetdown.md_data["Entity 1"]["✅"]
+    for entity in meetdown.md_data:        
+      assert "✅" in meetdown.md_data[entity]
+      assert "⬜" in meetdown.md_data[entity]
