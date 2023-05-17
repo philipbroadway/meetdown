@@ -104,7 +104,7 @@ class MeetDown:
 
         # Now, print all items and let the user select one
         for i, (entity, category, item) in enumerate(all_items, start=1):
-            print(f"{spacer}{i}. {entity} - {category} - {item['description']}")
+            print(f"{spacer}{i}. {entity}-{category}-{item['description']}")
         
         item_index = input(f"\nToggle which item?: ")
         if item_index == '':  # if input is empty, return to main menu
@@ -166,7 +166,7 @@ class MeetDown:
             return
         
         if int(item_type_index) -1 > len(items):
-          print(f"Please select a number between 1 and {len(items)}")
+          print(f"{self.config['invalid']}\nShould be between 1 and {len(items)}")
           return
 
         item = items[int(item_type_index) -1]
@@ -216,12 +216,11 @@ class MeetDown:
 
         return editable, ticket_or_description, input_text
 
-        
     def edit_prompt(self):
       print("\nEditables:\n")
       for i, editable in enumerate(self.editables(), start=1):
-          ticket = f"{editable['external_ticket']}" if editable['external_ticket'] else "N/A"
-          print(f"{i}. {editable['category']} | {editable['entity']} | {ticket} | {editable['description']}")
+          ticket = f"-{editable['external_ticket']}" if editable['external_ticket'] else ""
+          print(f"{i}. {editable['entity']}-{editable['category']}{ticket}-{editable['description']}")
 
       selected_index = input("\nSelect an editable item by entering the number: ")
       if not selected_index.isdigit():
@@ -255,10 +254,12 @@ class MeetDown:
       # Prepare a list of all items, each entity and each entity's category items
       items = []
       item_count = 0
-      for entity, data in self.data.items():
+      padding = " "
+      print(f"\n{padding}{self.config['prompt-remove']}:\n")
+      for entity, data in sorted(self.data.items()):
           # Append each entity to the list
           item_count += 1
-          print(f"{item_count}. {self.config['id']} {entity}")
+          print(f"{padding}{padding}{item_count}. {self.config['id']} {entity}")
           items.append({
               "index": item_count,
               "entity": entity,
@@ -269,7 +270,7 @@ class MeetDown:
           for category, category_items in data.items():
               for category_index, item in enumerate(category_items):
                   item_count += 1
-                  print(f"{item_count}. {category} for {entity} - {item['description']}")
+                  print(f"{padding}{padding}{item_count}. {entity}-{category}-{item['description']}")
                   items.append({
                       "index": item_count,
                       "entity": entity,
@@ -280,7 +281,7 @@ class MeetDown:
                   })
 
       # Ask the user to select an item or entity to remove
-      item_index = input("Enter the number of the item to remove: ")
+      item_index = input("\nEnter the number of the item to remove: ")
       if item_index == '' or  item_index.isdigit() == False:
           return
       if self.config['debug']:
@@ -317,9 +318,7 @@ class MeetDown:
         if not save_location.endswith(".md"):
             save_location += ".md"
         self.ensure_default_states_items_exist_in_data()
-        
         self.write(save_location, False)
-        print(f"\n💾:\nfile://{save_location}\n")
 
     def save_to_redis(self):
         # Prompt user for Redis folder and filename
@@ -432,11 +431,9 @@ class MeetDown:
             
             for line in self.preview(self.data):
                 file.write(line)
-
         if buhbye:
             print(f"\nkthx👋")
-        print(f"\n💾: file://{MeetDownUtils.pwd()}/{self.config['tmp']}\n")
-
+        print(f"\n💾: file:/{MeetDownUtils.pwd()}/{filename}\n")
 
     def ensure_default_states_items_exist_in_data(self):
         for record in self.config['status-types']:
