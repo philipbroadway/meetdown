@@ -8,7 +8,6 @@ NAME="""
 # meetdown
 """
 import os, time
-import shutil
 import argparse
 import datetime
 import panflute as pf
@@ -52,10 +51,6 @@ class MeetDown:
                 category_index += 1
 
         return result
-    
-    def get_terminal_width(self):
-        terminal_width, _ = shutil.get_terminal_size()
-        return terminal_width
 
     def generate_options(self):
         opts = []
@@ -72,8 +67,7 @@ class MeetDown:
         return "\n".join(["\n".join(opts)])
 
     def parse_arguments(self):
-      now = datetime.datetime.now()
-      now.strftime("%m-%d-%Y-")
+      now = self.utils.now()
       parser = argparse.ArgumentParser(description='Process command-line arguments.')
       parser.add_argument('--title', type=str, default=f"standup-{now}", help='Title (default: aws-p13.md)')
       parser.add_argument('--entities', type=str, default='philipbroadway', help='List of entities separated by commas (example: pike13,aws-sales)')
@@ -85,12 +79,6 @@ class MeetDown:
           args.entities = args.entities.split(',')
 
       return args
-
-    def clear_screen(self):
-      if os.name == 'posix':
-          os.system('clear')
-      elif os.name == 'nt':
-          os.system('cls')
 
     def external(self):
         return self.config['external']['id']
@@ -211,7 +199,7 @@ class MeetDown:
     })
         
     def edit_ticket_or_description(self, editable):
-        ticket_or_description = input("\nOptions:\n1. Ticket\n2. Description\n\nSelect an option by entering the number: ")
+        ticket_or_description = input("\nOptions:\n\n1. Edit Ticket\n2. Edit Description\n\nSelect an option by entering the number: ")
         if not ticket_or_description.isdigit():
             print("Invalid input. Please enter a number.")
             return None, None, None
@@ -291,7 +279,8 @@ class MeetDown:
       item_index = input("Enter the number of the item to remove: ")
       if item_index == '' or  item_index.isdigit() == False:
           return
-      print(f"data: {self.md_data}")
+      if self.config['debug']:
+        print(f"data: {self.md_data}")
       item_index = int(item_index) - 1
       selected_item = items[item_index]
 
@@ -318,8 +307,7 @@ class MeetDown:
         return entity_index
 
     def save_to_file(self):
-        now = datetime.datetime.now()
-        now.strftime("%m-%d-%Y-")
+        now = self.utils.now()
         save_location = input(f"Enter filename (default: meetdown-{now}.md): ") or f"meetdown-{now}.md"
 
         if not save_location.endswith(".md"):
@@ -467,47 +455,43 @@ class MeetDown:
             # if record not in self.md_data:
             #     self.md_data[record] = {list(states.keys())[0]: [] for states in self.config['states']}
 
-    def preview(self, md_data, pretty=False):
-        now = datetime.datetime.now()
-        now = now.strftime("%m-%d-%Y-%I-%M-%p")
+    def preview(self, md_data, compact=False):
+        now = self.utils.now()
         result =[]
-        if pretty:
+        if compact:
           result = [f"{NAME} > {now}", ""]
         else:
-          result = [f"{NAME}", f"> {now}", ""]
+          result = [f"{NAME}", f"\n> {now}", "\n\n"]
         interval = 0
         refs = []
         for entity, data in md_data.items():
             new_line = "" if interval > 0 else ""
-            result.append(f"{new_line}## {entity}\n")
+            result.append(f"{new_line}## {entity}")
+            if not compact:
+                result.append("\n")
+                result.append("\n")#For `valid` markdown
             result.append(f"| Category | {self.external().capitalize()} Ticket | Description |\n")
             result.append("|----------|-------------|-------------|\n")
-            no_items = True
+
             for category, items in data.items():
                   for item in items:
-                      no_items = False
                       if item.get("external_ticket"):
                         refs.append(self.createInternalReferenceLink(item))
                         external_ticket = self.toInternalLink(item)
-                        ticket = item['external_ticket'] if pretty else {external_ticket}
-                        ticket = f"[{ticket}]" if pretty else ticket
+                        ticket = f"[{item['external_ticket']}]" if compact else external_ticket
                         if self.config['debug']:
                             print(f"external_ticket: {external_ticket} item: {item}")
                         result.append(f"| {category} | {ticket} | {item['description']} |\n")
                       else:
                         result.append(f"| {category} |  | {item['description']} |\n")
-            result.append("")
+            result.append("\n")
             interval += 1
         if len(refs) > 0:
-            result.append("\n\n")
-            # remove duplicates
+            result.append("### References\n\n")
             uniq_refs = list(set(refs))
-            if not pretty:
+            if not compact:
                 for ref in uniq_refs:
                   result.append(f"{ref}\n")
-                result.append("\n")
-        
-
         return result
     
     def notify(self, message):
@@ -525,17 +509,12 @@ class MeetDown:
         #     print("This method is intended to run on macOS only.")
 
     def meetdown(self, args, config, md_data):
-        self.md_data = md_data#{entity: {list(states.keys())[0]: [] for states in self.config['states']} for entity in args.entities}
+        self.md_data = md_data
         self.config['status-types'] = args.entities
-        #ensure each entitiy has each states with an empty array
         self.ensure_default_states_items_exist_in_md_data()
 
         while True:
-            # Ensure each entity has each states and same keys with an empty array and optionally items in each array
-            
             os.system('clear')
-            width = self.get_terminal_width()
-            # print(f"{NAME}")
             # Preview
             previews = self.preview(self.md_data, True)
             for preview in previews:
@@ -605,7 +584,7 @@ class MeetDown:
                 else:
                     # Display an error message and continue with default data
                     print("Failed to load data from file. Continuing with default configuration.")
-        self.clear_screen()
+        self.utils.clear_screen()
         self.meetdown(args, self.config, self.md_data)
 
 if __name__ == "__main__":
