@@ -32,8 +32,8 @@ class MeetDownConfig:
             "states": [
                 {"⬜": "⬜ todo"},
                 {"✅": "✅ done"},
-                {"🔥":  "🔥 ready-qa"},
-                {"🚫":  "🚫 blocked"},
+                # {"🔥":  "🔥 ready-qa"},
+                # {"🚫":  "🚫 blocked"},
                 # {"💩:  "💩 trash"},
                 # {"🔴":  "🔴 blocked"},
                 # {"🟡":  "🟡 in-progress"},
@@ -53,7 +53,7 @@ class MeetDownConfig:
                
                 # mojii: https://emojidb.org
             ],
-            'status-types': [],
+            'imported-states': [],
             "debug": 0,
             "tmpl": [
                 {"id": "⛔", "desc": "Invalid"}
