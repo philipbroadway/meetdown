@@ -534,12 +534,27 @@ class MeetDown:
         result.append("\n")
 
         return result
+    
+    def notify(self, message):
+        if os.name == 'posix' and os.uname().sysname == 'Darwin':
+            try:
+                from pync import Notifier
+            except ImportError:
+                exit(1)
+
+            # Need to know absolute path to script & mardown file
+            # Notifier.notify('Is ? still ?', execute=python absolute/path/to/meetdown meetdown/file/path)'
+            Notifier.notify(f"{message}")
+
+        # else:
+        #     print("This method is intended to run on macOS only.")
 
     def meetdown(self, args, config, md_data):
         self.md_data = md_data#{entity: {list(states.keys())[0]: [] for states in self.config['states']} for entity in args.entities}
         self.config['status-types'] = args.entities
         #ensure each entitiy has each states with an empty array
         self.ensure_default_states_items_exist_in_md_data()
+
         while True:
             # Ensure each entity has each states and same keys with an empty array and optionally items in each array
             
