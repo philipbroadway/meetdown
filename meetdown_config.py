@@ -73,9 +73,10 @@ class MeetDownConfig:
         opts.append(f" 1. {config['prompt-add']}")
         opts.append(f" 2. {config['prompt-edit']}")
         opts.append(f" 3. {config['prompt-load']}")
-        opts.append(f" 4. {config['prompt-save']}")
+        opts.append(f" 4. {config['prompt-toggle']}")
         opts.append(f" 5. {config['prompt-remove']}")
-        opts.append(f" 6. {config['prompt-toggle']}")
+        opts.append(f" 6. {config['prompt-save']}")
+        
         
         if config['debug']:
           opts.append(f"7. Upload")
