@@ -17,7 +17,7 @@ class MeetDownConfig:
             "id": "👤",
             "desc": "👤 person",
             "prompt-type": "Option",
-            "prompt-main": " Enter number",
+            "prompt-main": "Enter number",
             "prompt-add": "Add",
             "prompt-remove": "Remove",
             "prompt-toggle": "Toggle",
@@ -70,12 +70,15 @@ class MeetDownConfig:
     @staticmethod
     def generate_options(config):
         opts = []
-        opts.append(f" 1. {config['prompt-add']}")
-        opts.append(f" 2. {config['prompt-edit']}")
-        opts.append(f" 3. {config['prompt-load']}")
-        opts.append(f" 4. {config['prompt-toggle']}")
-        opts.append(f" 5. {config['prompt-remove']}")
-        opts.append(f" 6. {config['prompt-save']}")
+        value = f"1. ➕ {config['prompt-add']} \t2. ✎ {config['prompt-edit']} \t3. 🔌 {config['prompt-load']} \t4. 🔀 {config['prompt-toggle']} \t5. 🗑️  {config['prompt-remove']} \t6. 💾 {config['prompt-save']} \n"
+        opts.append(value)
+
+        # opts.append(f" 1. {config['prompt-add']}")
+        # opts.append(f" 2. {config['prompt-edit']}")
+        # opts.append(f" 3. {config['prompt-load']}")
+        # opts.append(f" 4. {config['prompt-toggle']}")
+        # opts.append(f" 5. {config['prompt-remove']}")
+        # opts.append(f" 6. {config['prompt-save']}")
         
         
         if config['debug']:

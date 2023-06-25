@@ -30,7 +30,8 @@ def test_preview_returns_list_of_strings(meetdown, single_entity_single_item_wit
     assert all(isinstance(item, str) for item in result)
 
 def test_choices_of_add_method(meetdown):
-    expected_choices = " 1. Add\n 2. Edit\n 3. Load\n 4. Toggle\n 5. Remove\n 6. Save & Quit"
+    config = meetdown.config
+    expected_choices = f"1. ➕ {config['prompt-add']} \t2. ✎ {config['prompt-edit']} \t3. 🔌 {config['prompt-load']} \t4. 🔀 {config['prompt-toggle']} \t5. 🗑️  {config['prompt-remove']} \t6. 💾 {config['prompt-save']} \n"
     result = MeetDownConfig.generate_options(MeetDown.default_config())
     print(expected_choices)
     assert result == expected_choices
@@ -175,7 +176,7 @@ def test_ensure_default_states_items_exist_in_data(meetdown):
             "✅": []
         }
     }
-    
+
     meetdown.ensure_default_states_items_exist_in_data()
 
     # Verify that missing ctx items have been added

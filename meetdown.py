@@ -502,14 +502,15 @@ class MeetDown:
     
     def render_terminal_preview(self, config, data, compact=False):
         result = []
+        
         previews = self.preview(data, True)
         for preview in previews:
                 result.append(preview.replace("\n",""))
 
         if self.config['debug']:
-            result.append(f"{self.config['separator-1']}\n\nOptions:\n\n{MeetDownConfig.generate_options(self.config)}\n") 
+            result.append(f"{self.config['separator-1']}\n\nOptions:\n\n{MeetDownConfig.generate_options(self.config)}") 
         else:
-            result.append(f"Options:\n\n{MeetDownConfig.generate_options(self.config)}\n")
+            result.append(f"Options: {MeetDownConfig.generate_options(self.config)}")
         return result
 
     def meetdown(self, args, config, data):
@@ -520,7 +521,6 @@ class MeetDown:
         while True:
             os.system('clear')
             # Preview
-            print("")
             previews = self.render_terminal_preview(self.config, self.data, True)
             for preview in previews:
                 print(preview)
