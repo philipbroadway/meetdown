@@ -134,7 +134,7 @@ class MeetDown:
 
     def add_entity(self, entity):
         self.data[entity] = {list(states.keys())[0]: [] for states in self.config['states']}
-        self.config['imported_states'].append(entity)
+        self.config['imported-states'].append(entity)
         if entity not in self.data:
             self.data[entity] = {}
             for category in self.config['states']:
@@ -436,10 +436,24 @@ class MeetDown:
         print(f"\n 💾: file:/{MeetDownUtils.pwd()}/{filename}\n")
 
     def ensure_default_states_items_exist_in_data(self):
-        for record in self.config['imported-states']:
-            for entity in self.data.keys():
-                if record not in self.data[entity]:
-                    self.data[entity][record] = []
+        allkeys = []
+        for entity in self.data.keys():
+            for key in self.data[entity]:
+                allkeys.append(key)
+        unique_keys = set(allkeys)
+
+        for entity in self.data.keys():
+            for key in unique_keys:
+                if key not in self.data[entity]:
+                    self.data[entity][key] = []
+
+        print(f"self.config['imported-states']: {self.config['imported-states']}")
+        if self.config['imported-states'] != None:
+          for record in self.config['imported-states']:
+              for entity in self.data.keys():
+                  if record not in self.data[entity]:
+                      print(f"Adding {record} to {entity}")
+                      self.data[entity][record] = []
 
     def preview(self, data, compact=False):
         now = self.utils.now()

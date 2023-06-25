@@ -1,6 +1,7 @@
 import pytest
 
 from meetdown import MeetDown
+from meetdown_config import MeetDownConfig
 
 @pytest.fixture
 def meetdown():
@@ -23,15 +24,14 @@ def category(root, category="Category 1"):
     root[category] = []
     return root
 
-def test_preview_returns_list_of_strings(meetdown):
-    d = single_entity_single_item_with_external()
-    result = meetdown.preview(d)
+def test_preview_returns_list_of_strings(meetdown, single_entity_single_item_with_external):
+    result = meetdown.preview(single_entity_single_item_with_external)
     assert isinstance(result, list)
     assert all(isinstance(item, str) for item in result)
 
 def test_choices_of_add_method(meetdown):
-    expected_choices = "1. Add\n2. Edit\n3. Load\n4. Topggle\n5. Remove\n6. Quit & Save"
-    result = meetdown.generate_options()
+    expected_choices = " 1. Add\n 2. Edit\n 3. Load\n 4. Toggle\n 5. Remove\n 6. Save & Quit"
+    result = MeetDownConfig.generate_options(MeetDown.default_config())
     print(expected_choices)
     assert result == expected_choices
 
@@ -163,8 +163,11 @@ def test_remove_entity(meetdown):
 
 def test_ensure_default_states_items_exist_in_data(meetdown):
     # Set up initial data with missing ctx items
+
+    key = "test 1"
+
     meetdown.data = {
-        "Entity 1": {
+        key: {
             "⬜": []
         },
         "Entity 2": {
@@ -172,13 +175,11 @@ def test_ensure_default_states_items_exist_in_data(meetdown):
             "✅": []
         }
     }
-
-    # Ensure default ctx items exist
+    
     meetdown.ensure_default_states_items_exist_in_data()
 
     # Verify that missing ctx items have been added
 
-    assert meetdown.data["Entity 1"]["✅"]
     for entity in meetdown.data:        
       assert "✅" in meetdown.data[entity]
       assert "⬜" in meetdown.data[entity]
