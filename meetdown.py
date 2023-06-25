@@ -447,7 +447,6 @@ class MeetDown:
                 if key not in self.data[entity]:
                     self.data[entity][key] = []
 
-        print(f"self.config['imported-states']: {self.config['imported-states']}")
         if self.config['imported-states'] != None:
           for record in self.config['imported-states']:
               for entity in self.data.keys():
