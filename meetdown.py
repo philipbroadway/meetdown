@@ -1,19 +1,21 @@
-ASCII="""
+import time
+import os
+from meetdown_utils import MeetDownUtils
+from meetdown_config import MeetDownConfig
+from meetdown_parser import MeetDownParser
+import redis
+from bs4 import BeautifulSoup
+import panflute as pf
+import datetime
+import argparse
+ASCII = """
 ┌┬┐┌─┐┌─┐┌┬┐┌┬┐┌─┐┬ ┬┌┐┌
 │││├┤ ├┤  │  │││ │││││││
 ┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
 ________________________
 """
-NAME="#"
-import os, time
-import argparse
-import datetime
-import panflute as pf
-from bs4 import BeautifulSoup
-import redis
-from meetdown_parser import MeetDownParser
-from meetdown_config import MeetDownConfig
-from meetdown_utils import MeetDownUtils
+NAME = "#"
+
 
 class MeetDown:
     @staticmethod
@@ -27,23 +29,29 @@ class MeetDown:
         redis_host = os.environ.get('REDIS_HOST')
         redis_port = os.environ.get('REDIS_PORT')
         redis_password = os.environ.get('REDIS_PASSWORD')
-        self.redis_client = redis.Redis(host=redis_host, port=redis_port, password=redis_password)
+        self.redis_client = redis.Redis(
+            host=redis_host, port=redis_port, password=redis_password)
 
     def parse_arguments(self):
-      now = self.utils.now()
-      whoiam = self.utils.whoami()
-      parser = argparse.ArgumentParser(description='Process command-line arguments.')
-      parser.add_argument('--title', type=str, default=f"meetdown-{now}", help='Title (default: aws-p13.md)')
-      parser.add_argument('--entities', type=str, default=whoiam, help='Comma separated people or entities (example: pike13,aws-sales)')
-      parser.add_argument('--out', type=str, default=MeetDownUtils.pwd(), help='Save directory path (default: empty string)')
-      args = parser.parse_args()
+        now = self.utils.now()
+        whoiam = self.utils.whoami()
+        parser = argparse.ArgumentParser(
+            description='Process command-line arguments.')
+        parser.add_argument(
+            '--title', type=str, default=f"meetdown-{now}", help='Title (default: aws-p13.md)')
+        parser.add_argument('--entities', type=str, default=whoiam,
+                            help='Comma separated people or entities (example: pike13,aws-sales)')
+        parser.add_argument('--out', type=str, default=MeetDownUtils.pwd(),
+                            help='Save directory path (default: empty string)')
+        args = parser.parse_args()
 
-      if args.entities:
-          args.entities = args.entities.split(',')
-      return args
+        if args.entities:
+            args.entities = args.entities.split(',')
+        return args
 
     def states(self):
-        return ["⚫","⚪","🔵","🟡","🟢","🔴"]# off, on, busy, warn, done, error
+        # off, on, busy, warn, done, error
+        return ["⚫", "⚪", "🔵", "🟡", "🟢", "🔴"]
 
     def status_types(self):
         types = []
@@ -51,7 +59,7 @@ class MeetDown:
             for key in obj:
                 types.append(key)
         return types
-    
+
     def notify(self, message):
         if os.name == 'posix' and os.uname().sysname == 'Darwin':
             try:
@@ -73,23 +81,32 @@ class MeetDown:
                 category_index = 0
                 for item in self.data[entity][category]:
                     result.append({
-                        "entity": entity, 
-                        "category": category, 
-                        "item": item, 
-                        "category_index": category_index, 
-                        "external_ticket": item['external_ticket'], 
+                        "entity": entity,
+                        "category": category,
+                        "item": item,
+                        "category_index": category_index,
+                        "external_ticket": item['external_ticket'],
                         "description": item['description']
-                      })
+                    })
                 category_index += 1
         return result
 
     def external(self):
         return self.config['external']['id']
 
-    def toMarkdownExternalURL(self,id):
+    def toMarkdownExternalURL(self, id):
         return f"[{id}]({self.config['external']['url']}{id})"
 
     def toggle_prompt(self):
+
+        print("Options:\n\n1. Toggle owner\n2. Toggle status ")
+        selected_option = input("Enter a number: ")
+        if not selected_option.isdigit():
+            return None
+
+        if int(selected_option) == 1:
+            return self.reassign()
+
         # First, create a flat list of all items
         all_items = []
         for entity, data in sorted(self.data.items()):
@@ -105,7 +122,7 @@ class MeetDown:
         # Now, print all items and let the user select one
         for i, (entity, category, item) in enumerate(all_items, start=1):
             print(f"{spacer}{i}. {entity}-{category}-{item['description']}")
-        
+
         item_index = input(f"\nToggle which item?: ")
         if item_index == '':  # if input is empty, return to main menu
             return
@@ -117,7 +134,8 @@ class MeetDown:
         # Now, let the user select the new category
         for i, states in enumerate(self.config['states'], start=1):
             print(f"{i}. {list(states.keys())[0]}")
-        to_category_index = input("Select the new category of the item by entering the number: ")
+        to_category_index = input(
+            "Select the new category of the item by entering the number: ")
         if to_category_index == '':  # if input is empty, return to main menu
             return
         to_category_index = int(to_category_index) - 1
@@ -126,14 +144,15 @@ class MeetDown:
         self.toggle_status(entity, from_category, to_category, item)
 
     def toggle_status(self, entity, from_category, to_category, item):
-      if to_category not in self.data[entity]:
-          self.data[entity][to_category] = []
-      if self.data[entity][from_category]:
-          self.data[entity][from_category].remove(item)
-      self.data[entity][to_category].append(item)
+        if to_category not in self.data[entity]:
+            self.data[entity][to_category] = []
+        if self.data[entity][from_category]:
+            self.data[entity][from_category].remove(item)
+        self.data[entity][to_category].append(item)
 
     def add_entity(self, entity):
-        self.data[entity] = {list(states.keys())[0]: [] for states in self.config['states']}
+        self.data[entity] = {list(states.keys())[0]: []
+                             for states in self.config['states']}
         self.config['imported-states'].append(entity)
         if entity not in self.data:
             self.data[entity] = {}
@@ -142,7 +161,7 @@ class MeetDown:
 
     def remove_entity(self, entity):
         if entity in self.data:
-          del self.data[entity]
+            del self.data[entity]
 
     def add_prompt(self):
         # Get the list of all types of items
@@ -151,59 +170,66 @@ class MeetDown:
         # Print all item types and let the user select one
         items = []
         print(f"{self.config['separator-2']}\n\n{self.config['prompt-add']}\n")
-        
+
         for i, item_type in enumerate(item_types, start=1):
             for n, entity in enumerate(sorted(self.data), start=1):
-              item_count += 1
-              print(f"{item_count}. {entity}-{item_type}")
-              items.append({"index": item_count, "entity": entity, "item_type": item_type})
+                item_count += 1
+                print(f"{item_count}. {entity}-{item_type}")
+                items.append(
+                    {"index": item_count, "entity": entity, "item_type": item_type})
         item_count += 1
         print(f"{item_count}. {self.config['id']}")
-        items.append({"index": item_count+1, "entity": self.config['id'], "item_type": self.config['id']})
-        
-        item_type_index = input(f"\n{self.config['prompt-main']}: ")
-        if item_type_index == '' or  item_type_index.isdigit() == False:
-            return
-        
-        if int(item_type_index) -1 > len(items):
-          print(f"{self.config['invalid']}\nShould be between 1 and {len(items)}")
-          return
+        items.append({"index": item_count+1,
+                     "entity": self.config['id'], "item_type": self.config['id']})
 
-        item = items[int(item_type_index) -1]
-        
+        item_type_index = input(f"\n{self.config['prompt-main']}: ")
+        if item_type_index == '' or item_type_index.isdigit() == False:
+            return
+
+        if int(item_type_index) - 1 > len(items):
+            print(
+                f"{self.config['invalid']}\nShould be between 1 and {len(items)}")
+            return
+
+        item = items[int(item_type_index) - 1]
+
         selected_entity = item['entity']
         selected_item_type = item['item_type']
 
         if selected_entity == self.config['id']:
-          new_root = input(f"Enter name for {self.config['desc']}: ")
-          # Initialize an empty list for each category in config's context
-          self.add_entity(new_root)
-          print(f"➕  '{new_root}'")
+            new_root = input(f"Enter name for {self.config['desc']}: ")
+            # Initialize an empty list for each category in config's context
+            self.add_entity(new_root)
+            print(f"➕  '{new_root}'")
 
         else:
-          # Ask for the details of the new item
-          is_external = input(f"Is this a {self.external().capitalize()} ticket? (y/n): ").lower() 
-          if is_external == 'y':
-              external_ticket = input(f"Enter {self.external().capitalize()} ID (ex: FD-12234): ")
-          else:
-              external_ticket = ''
-          description = input(f"Enter {selected_item_type} description: ")
-          if description == '':  # if input is empty, return to main menu
-              return
+            # Ask for the details of the new item
+            is_external = input(
+                f"Is this a {self.external().capitalize()} ticket? (y/n): ").lower()
+            if is_external == 'y':
+                external_ticket = input(
+                    f"Enter {self.external().capitalize()} ID (ex: FD-12234): ")
+            else:
+                external_ticket = ''
+            description = input(f"Enter {selected_item_type} description: ")
+            if description == '':  # if input is empty, return to main menu
+                return
 
-          # Add the new item to the selected category for the selected entity
-          self.add_item(selected_entity, selected_item_type, external_ticket, description)
+            # Add the new item to the selected category for the selected entity
+            self.add_item(selected_entity, selected_item_type,
+                          external_ticket, description)
 
-          print(f"New {selected_item_type} item added for {selected_entity}.")
-    
+            print(f"New {selected_item_type} item added for {selected_entity}.")
+
     def add_item(self, entity, item_type, external_ticket, description):
         self.data[entity][item_type].append({
             "external_ticket": external_ticket,
             "description": description
-    })
-        
+        })
+
     def edit_ticket_or_description(self, editable):
-        ticket_or_description = input("\nOptions:\n\n1. Edit Ticket\n2. Edit Description\n\nSelect an option by entering the number: ")
+        ticket_or_description = input(
+            "\nOptions:\n\n1. Edit Ticket\n2. Edit Description\n\nSelect an option by entering the number: ")
         if not ticket_or_description.isdigit():
             print("Invalid input. Please enter a number.")
             return None, None, None
@@ -214,85 +240,147 @@ class MeetDown:
         if input_text == '':
             return None, None, None
         else:
-           return editable, ticket_or_description, input_text
+            return editable, ticket_or_description, input_text
 
     def edit_prompt(self):
-      print("\nEditables:\n")
-      for i, editable in enumerate(self.editables(), start=1):
-          ticket = f"-{editable['external_ticket']}" if editable['external_ticket'] else ""
-          print(f"{i}. {editable['entity']}-{editable['category']}{ticket}-{editable['description']}")
+        print("\nEditables:\n")
+        for i, editable in enumerate(self.editables(), start=1):
+            ticket = f"-{editable['external_ticket']}" if editable['external_ticket'] else ""
+            print(
+                f"{i}. {editable['entity']}-{editable['category']}{ticket}-{editable['description']}")
 
-      selected_index = input("\nSelect an editable item by entering the number: ")
-      if not selected_index.isdigit():
-          print(f"{self.config['invalid']}")
-          return None
+        selected_index = input(
+            "\nSelect an editable item by entering the number: ")
+        if not selected_index.isdigit():
+            print(f"{self.config['invalid']}")
+            return None
 
-      selected_index = int(selected_index)
-      if selected_index < 1 or selected_index > len(self.editables()):
-          print(f"{self.config['invalid']}")
-          return None
+        selected_index = int(selected_index)
+        if selected_index < 1 or selected_index > len(self.editables()):
+            print(f"{self.config['invalid']}")
+            return None
 
-      selected_editable = self.editables()[selected_index - 1]
+        selected_editable = self.editables()[selected_index - 1]
 
-      editable, ticket_or_description, input_text = self.edit_ticket_or_description(selected_editable)
-      return self.edit(selected_editable, ticket_or_description, input_text)
+        editable, ticket_or_description, input_text = self.edit_ticket_or_description(
+            selected_editable)
+        return self.edit(selected_editable, ticket_or_description, input_text)
 
     def edit(self, editable, option, new_value):
-      data = self.data
-      option_key = 'external_ticket' if option == 1 else 'description'
-      print(f"Edit {option_key}: {editable[option_key]} -> {new_value}")
-      for type in data[editable['entity']]:
-          for i, item in enumerate(data[editable['entity']][type]):
-              if item['external_ticket'] == editable['external_ticket'] and item['description'] == editable['description']:
-                  print(f"✅  {editable['entity']} - {type} - {new_value} -> {data[editable['entity']][type][i][option_key]}")
-                  self.data[editable['entity']][type][i][option_key] = new_value
-                  print(f"✅ {data[editable['entity']][type][i][option_key]}")
-                  continue
-      return data, self.config
+        data = self.data
+        option_key = 'external_ticket' if option == 1 else 'description'
+        print(f"Edit {option_key}: {editable[option_key]} -> {new_value}")
+        for type in data[editable['entity']]:
+            for i, item in enumerate(data[editable['entity']][type]):
+                if item['external_ticket'] == editable['external_ticket'] and item['description'] == editable['description']:
+                    print(
+                        f"✅  {editable['entity']} - {type} - {new_value} -> {data[editable['entity']][type][i][option_key]}")
+                    self.data[editable['entity']
+                              ][type][i][option_key] = new_value
+                    print(f"✅ {data[editable['entity']][type][i][option_key]}")
+                    continue
+        return data, self.config
+
+    def users(self):
+        result = []
+        for user in self.data:
+            result.append(user)
+        return result
+
+    def reassign(self):
+
+        print("\nItems:\n")
+        for i, item in enumerate(self.editables(), start=1):
+            print(
+                f"{i}. {item['entity']}-{item['category']}-{item['description']}")
+
+        selected_item_index = input(
+            "\nSelect an item by entering the number: ")
+        if not selected_item_index.isdigit():
+            print(f"{self.config['invalid']}")
+            return None
+
+        selected_item_index = int(selected_item_index)
+        if selected_item_index < 1 or selected_item_index > len(self.editables()):
+            print(f"{self.config['invalid']}")
+            return None
+
+        selected_item = self.editables()[selected_item_index - 1]
+
+        print("\nUsers:\n")
+        for i, user in enumerate(self.users(), start=1):
+            print(f"{i}. {user}")
+
+        selected_user_index = input("\nSelect a user by entering the number: ")
+        if not selected_user_index.isdigit():
+            print(f"{self.config['invalid']}")
+            return None
+
+        selected_user_index = int(selected_user_index)
+        if selected_user_index < 1 or selected_user_index > len(self.data):
+            print(f"{self.config['invalid']}")
+            return None
+
+        selected_user = self.users()[selected_user_index - 1]
+
+        self.assign_item_to_user(selected_item, selected_user)
+
+    def assign_item_to_user(self, item, user):
+
+        for key in self.data:
+            for i in self.data[key][item['category']]:
+                print(f"i: {i} item: {item}")
+                if i == item['item']:
+                    self.data[key][item['category']].remove(i)
+
+        self.data[user][item['category']].append(item)
 
     def remove_prompt(self):
-      # Prepare a list of all items, each entity and each entity's category items
-      items = []
-      item_count = 0
-      padding = " "
-      print(f"\n{padding}{self.config['prompt-remove']}:\n")
-      for entity, data in sorted(self.data.items()):
-          # Append each entity to the list
-          item_count += 1
-          print(f"{padding}{padding}{item_count}. {self.config['id']} {entity}")
-          items.append({
-              "index": item_count,
-              "entity": entity,
-              "type": "entity"
-          })
+        # Prepare a list of all items, each entity and each entity's category items
+        items = []
+        item_count = 0
+        padding = " "
+        print(f"\n{padding}{self.config['prompt-remove']}:\n")
+        for entity, data in sorted(self.data.items()):
+            # Append each entity to the list
+            item_count += 1
+            print(
+                f"{padding}{padding}{item_count}. {self.config['id']} {entity}")
+            items.append({
+                "index": item_count,
+                "entity": entity,
+                "type": "entity"
+            })
 
-          # Append each entity's category items to the list
-          for category, category_items in data.items():
-              for category_index, item in enumerate(category_items):
-                  item_count += 1
-                  print(f"{padding}{padding}{item_count}. {entity}-{category}-{item['description']}")
-                  items.append({
-                      "index": item_count,
-                      "entity": entity,
-                      "category": category,
-                      "item": item,
-                      "type": "item",
-                      "category_index": category_index
-                  })
+            # Append each entity's category items to the list
+            for category, category_items in data.items():
+                for category_index, item in enumerate(category_items):
+                    item_count += 1
+                    print(
+                        f"{padding}{padding}{item_count}. {entity}-{category}-{item['description']}")
+                    items.append({
+                        "index": item_count,
+                        "entity": entity,
+                        "category": category,
+                        "item": item,
+                        "type": "item",
+                        "category_index": category_index
+                    })
 
-      # Ask the user to select an item or entity to remove
-      item_index = input("\nEnter the number of the item to remove: ")
-      if item_index == '' or  item_index.isdigit() == False:
-          return
-      if self.config['debug']:
-        print(f"data: {self.data}")
-      item_index = int(item_index) - 1
-      selected_item = items[item_index]
+        # Ask the user to select an item or entity to remove
+        item_index = input("\nEnter the number of the item to remove: ")
+        if item_index == '' or item_index.isdigit() == False:
+            return
+        if self.config['debug']:
+            print(f"data: {self.data}")
+        item_index = int(item_index) - 1
+        selected_item = items[item_index]
 
-      if selected_item['type'] == 'entity':
-          self.remove_entity(selected_item['entity'])
-      else:
-          self.remove_item(selected_item['entity'], selected_item['category'], selected_item['category_index'])
+        if selected_item['type'] == 'entity':
+            self.remove_entity(selected_item['entity'])
+        else:
+            self.remove_item(
+                selected_item['entity'], selected_item['category'], selected_item['category_index'])
 
     def remove_item(self, entity, item_type, item_index):
         if self.data[entity][item_type][item_index] == None:
@@ -302,7 +390,8 @@ class MeetDown:
     def select_entity(self):
         for i, entity in enumerate(self.config['imported-states'], start=1):
             print(f"{i}. {entity}")
-        entity_index = input(f"Select a {self.config['desc']} by entering the number, or press Enter to return to main menu: ")
+        entity_index = input(
+            f"Select a {self.config['desc']} by entering the number, or press Enter to return to main menu: ")
         if entity_index == '':  # if entity input is empty, return to main menu
             return None
         entity_index = int(entity_index) - 1
@@ -313,7 +402,8 @@ class MeetDown:
 
     def save_to_file(self):
         now = self.utils.now()
-        save_location = input(f"Enter filename (default: meetdown-{now}.md): ") or f"meetdown-{now}.md"
+        save_location = input(
+            f"Enter filename (default: meetdown-{now}.md): ") or f"meetdown-{now}.md"
 
         if not save_location.endswith(".md"):
             save_location += ".md"
@@ -390,28 +480,30 @@ class MeetDown:
         self.config = config
         self.data = data
         return data, config
-    
+
     def update_data_item_categories(self, data, category):
         if self.config['debug']:
-          print(f"\n[before]update_data_item_categories:------\n\ndata: {data}")
-          print(f"\ncategory: {category}")
+            print(
+                f"\n[before]update_data_item_categories:------\n\ndata: {data}")
+            print(f"\ncategory: {category}")
         keys = [category]
         for entity in data.keys():
             entitity_keys = []
             for key in data[entity]:
-              keys.append(key)
+                keys.append(key)
         unique_keys = set(keys)
         for entity in data.keys():
             for key in unique_keys:
                 if key not in data[entity]:
                     data[entity][key] = []
         if self.config['debug']:
-          print(f"\n[fater]update_data_item_categories:------\n\ndata: {data}")
-          print(f"\ncategory: {category}")
+            print(
+                f"\n[fater]update_data_item_categories:------\n\ndata: {data}")
+            print(f"\ncategory: {category}")
 
     def kebob(self, text):
         return text.lower().replace(" ", "-")
-    
+
     def toInternalLink(self, item):
         external_ticket = item["external_ticket"]
         if external_ticket:
@@ -428,7 +520,7 @@ class MeetDown:
 
     def write(self, filename, buhbye=False):
         with open(filename, "w") as file:
-            
+
             for line in self.preview(self.data):
                 file.write(line)
         if buhbye:
@@ -452,22 +544,23 @@ class MeetDown:
             for entity in args.entities:
                 if entity not in self.data.keys():
                     self.add_entity(entity)
-      
+
         for record in args.entities:
-              for entity in self.data.keys():
-                  if record not in self.data[entity]:
-                      if self.config['debug']:
-                          print(f"Adding {record} to {entity}")
-                      self.data[entity][record] = []
+            for entity in self.data.keys():
+                if record not in self.data[entity]:
+                    if self.config['debug']:
+                        print(f"Adding {record} to {entity}")
+                    self.data[entity][record] = []
 
     def preview(self, data, compact=False):
         now = self.utils.now()
         spacer = " " if compact else ""
-        result =[]
+        result = []
         if compact:
-          result = [f"{self.states()[1]} MeetDown://{self.config['title']}{now}", ""]
+            result = [
+                f"{self.states()[1]} MeetDown://{self.config['title']}{now}", ""]
         else:
-          result = [f"{NAME} {self.config['title']} @ {now}", "\n\n"]
+            result = [f"{NAME} {self.config['title']} @ {now}", "\n\n"]
         interval = 0
         refs = []
         for entity, data in sorted(data.items()):
@@ -482,20 +575,24 @@ class MeetDown:
                     has_items = True
                     break
             if has_items or not compact:
-              result.append(f"{spacer}| State | {self.external().capitalize()} Ticket | Description |\n")
-              result.append(f"{spacer}{self.config['table-separator']}\n")
+                result.append(
+                    f"{spacer}| State | {self.external().capitalize()} Ticket | Description |\n")
+                result.append(f"{spacer}{self.config['table-separator']}\n")
 
             for category, items in data.items():
-                  for item in items:
-                      if item.get("external_ticket"):
+                for item in items:
+                    if item.get("external_ticket"):
                         refs.append(self.createInternalReferenceLink(item))
                         external_ticket = self.toInternalLink(item)
                         ticket = f"[{item['external_ticket']}]" if compact else external_ticket
                         if self.config['debug']:
-                            print(f"external_ticket: {external_ticket} item: {item}")
-                        result.append(f"{spacer}| {category} | {ticket} | {item['description']} |\n")
-                      else:
-                        result.append(f"{spacer}| {category} |  | {item['description']} |\n")
+                            print(
+                                f"external_ticket: {external_ticket} item: {item}")
+                        result.append(
+                            f"{spacer}| {category} | {ticket} | {item['description']} |\n")
+                    else:
+                        result.append(
+                            f"{spacer}| {category} |  | {item['description']} |\n")
             result.append("\n")
             interval += 1
         if len(refs) > 0:
@@ -505,18 +602,20 @@ class MeetDown:
                 for ref in uniq_refs:
                     result.append(f"{ref}\n")
         return result
-    
+
     def render_terminal_preview(self, config, data, compact=False):
         result = []
-        
+
         previews = self.preview(data, True)
         for preview in previews:
-                result.append(preview.replace("\n",""))
+            result.append(preview.replace("\n", ""))
 
         if self.config['debug']:
-            result.append(f"{self.config['separator-1']}\n\nOptions:\n\n{MeetDownConfig.generate_options(self.config)}") 
+            result.append(
+                f"{self.config['separator-1']}\n\nOptions:\n\n{MeetDownConfig.generate_options(self.config)}")
         else:
-            result.append(f"Options: {MeetDownConfig.generate_options(self.config)}")
+            result.append(
+                f"Options: {MeetDownConfig.generate_options(self.config)}")
         return result
 
     def meetdown(self, args, config, data):
@@ -525,27 +624,28 @@ class MeetDown:
         self.ensure_default_states_items_exist_in_data()
 
         while True:
-            
+
             os.system('clear')
             # Preview
-            previews = self.render_terminal_preview(self.config, self.data, True)
+            previews = self.render_terminal_preview(
+                self.config, self.data, True)
             for preview in previews:
                 print(preview)
             self.ensure_default_states_items_exist_in_data()
             selected_option = input(f"{self.config['prompt-main']}: ")
-            
+
             # If user hits return with no input, kbai
             if not selected_option:
                 self.ensure_default_states_items_exist_in_data()
                 self.write(self.config['tmp'], True)
                 break
-            
+
             try:
                 selected_option = int(selected_option)
             except ValueError:
                 print(f"\n{self.config['error-invalid-option']}\n")
                 continue
-            
+
             states_length = len(self.config['states'])
             if selected_option == 1:
                 self.add_prompt()
@@ -560,13 +660,13 @@ class MeetDown:
                     self.data = loaded_data
                     self.config = config
             elif selected_option == 4:
-              self.toggle_prompt()
+                self.toggle_prompt()
             elif selected_option == 5:
-              self.remove_prompt()
+                self.remove_prompt()
             elif selected_option == 6:
                 self.save_to_file()
                 break
-                
+
             elif selected_option == 7:
                 # Save states & upload to gist
                 # gist_desc = input("Enter a description for your `gist`: ")
@@ -575,6 +675,7 @@ class MeetDown:
                 print("Not implemented yet")
             else:
                 print(f"`${selected_option}` is an invalid option. \nEnter any number 1-{2*states_length+5} and hit return or hit return again to stash & exit")
+
     def main(self):
         args = self.parse_arguments()
 
@@ -587,9 +688,10 @@ class MeetDown:
             empty_title = title == None or title == ""
             print(f"title: {title}")
             if empty_title:
-                loaded_data, config = self.load_from_markdown(self.config['tmp'])  
+                loaded_data, config = self.load_from_markdown(
+                    self.config['tmp'])
                 if self.config['debug']:
-                  print(f'loaded_data: {loaded_data} config: {config}')
+                    print(f'loaded_data: {loaded_data} config: {config}')
                 # Load the data from the specified file
                 if loaded_data is not None and config is not None:
                     self.data = loaded_data
@@ -599,10 +701,11 @@ class MeetDown:
                 self.config['title'] = title
             else:
                 # Display an error message and continue with default data
-                print("Failed to load data from file. Continuing with default configuration.")
+                print(
+                    "Failed to load data from file. Continuing with default configuration.")
         self.utils.clear_screen()
         self.meetdown(args, self.config, self.data)
-        
+
 
 if __name__ == "__main__":
     meetdown = MeetDown(MeetDownConfig.default_config())
