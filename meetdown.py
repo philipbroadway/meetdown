@@ -575,7 +575,7 @@ class MeetDown:
         if os.path.exists(self.config['tmp']):
             self.utils.clear_screen()
             print(f"{ASCII}\n")
-            print(f"\nOptions:\n\n- Create New MeetDown - Enter new MeetDown name & press return\n- Resume Last MeetDown - Press return to resume")
+            print(f"\nOptions:\n\n⚪ Create New MeetDown  <Type a name & press return>\n⚪ Resume Last MeetDown <Press return to resume>")
             title = input(f"\n  meetdown > ")
             empty_title = title == None or title == ""
             print(f"title: {title}")
