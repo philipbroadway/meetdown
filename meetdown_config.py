@@ -81,7 +81,7 @@ class MeetDownConfig:
         # opts.append(f" 6. {config['prompt-save']}")
         
         
-        if config['debug']:
-          opts.append(f"7. Upload")
+        # if config['debug']:
+        #   opts.append(f"7. Upload")
         
         return "\n".join(["\n".join(opts)])

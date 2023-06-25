@@ -394,7 +394,7 @@ class MeetDown:
     def update_data_item_categories(self, data, category):
         if self.config['debug']:
           print(f"\n[before]update_data_item_categories:------\n\ndata: {data}")
-          print(f"\n\category: {category}")
+          print(f"\ncategory: {category}")
         keys = [category]
         for entity in data.keys():
             entitity_keys = []
@@ -407,7 +407,7 @@ class MeetDown:
                     data[entity][key] = []
         if self.config['debug']:
           print(f"\n[fater]update_data_item_categories:------\n\ndata: {data}")
-          print(f"\n\category: {category}")
+          print(f"\ncategory: {category}")
 
     def kebob(self, text):
         return text.lower().replace(" ", "-")
@@ -451,7 +451,7 @@ class MeetDown:
           for record in self.config['imported-states']:
               for entity in self.data.keys():
                   if record not in self.data[entity]:
-                      print(f"Adding {record} to {entity}")
+                      # print(f"Adding {record} to {entity}")
                       self.data[entity][record] = []
 
     def preview(self, data, compact=False):
