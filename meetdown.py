@@ -436,7 +436,7 @@ class MeetDown:
         print(f"\n 💾: file:/{MeetDownUtils.pwd()}/{filename}\n")
 
     def ensure_default_states_items_exist_in_data(self):
-        allkeys = []
+        allkeys = self.states()
         for entity in self.data.keys():
             for key in self.data[entity]:
                 allkeys.append(key)
@@ -446,12 +446,18 @@ class MeetDown:
             for key in unique_keys:
                 if key not in self.data[entity]:
                     self.data[entity][key] = []
+        args = self.parse_arguments()
 
-        if self.config['imported-states'] != None:
-          for record in self.config['imported-states']:
+        if args.entities:
+            for entity in args.entities:
+                if entity not in self.data.keys():
+                    self.add_entity(entity)
+      
+        for record in args.entities:
               for entity in self.data.keys():
                   if record not in self.data[entity]:
-                      # print(f"Adding {record} to {entity}")
+                      if self.config['debug']:
+                          print(f"Adding {record} to {entity}")
                       self.data[entity][record] = []
 
     def preview(self, data, compact=False):
@@ -519,6 +525,7 @@ class MeetDown:
         self.ensure_default_states_items_exist_in_data()
 
         while True:
+            
             os.system('clear')
             # Preview
             previews = self.render_terminal_preview(self.config, self.data, True)
@@ -595,6 +602,7 @@ class MeetDown:
                 print("Failed to load data from file. Continuing with default configuration.")
         self.utils.clear_screen()
         self.meetdown(args, self.config, self.data)
+        
 
 if __name__ == "__main__":
     meetdown = MeetDown(MeetDownConfig.default_config())

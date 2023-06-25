@@ -27,6 +27,9 @@ cd meetdown && pip install -r requirements.txt
 
 # Running app
 python meetdown.py
+
+# Start with set entities/people to add/toggle/edit/remove
+python meetdown.py --entities person1,person2,someBiz1,someBiz2
 ```
 
 ### Run in Docker
