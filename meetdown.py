@@ -26,6 +26,7 @@ class MeetDown:
         self.config = config
         self.utils = MeetDownUtils(config)
         self.data = {}
+        self.showing_help = True
         redis_host = os.environ.get('REDIS_HOST')
         redis_port = os.environ.get('REDIS_PORT')
         redis_password = os.environ.get('REDIS_PASSWORD')
@@ -99,12 +100,16 @@ class MeetDown:
 
     def toggle_prompt(self):
 
-        print("\nToggle Options:\n\n1. Toggle owner\n2. Toggle status\n")
+        print("Toggle Options:\n\n1. Toggle owner\n2. Toggle status\n")
         selected_option = input("Enter a number: ")
         if not selected_option.isdigit():
+            self.showing_help = True
+            self.render_root_preview()
             return None
 
         if int(selected_option) == 1:
+            self.showing_help = True
+            self.render_root_preview()
             return self.reassign()
 
         # First, create a flat list of all items
@@ -116,6 +121,8 @@ class MeetDown:
 
         if not all_items:
             print("No items to toggle.")
+            self.showing_help = True
+            self.render_root_preview()
             return
         spacer = " "
 
@@ -136,7 +143,9 @@ class MeetDown:
             print(f"{i}. {list(states.keys())[0]}")
         to_category_index = input(
             "Select the new category of the item by entering the number: ")
-        if to_category_index == '':  # if input is empty, return to main menu
+        if to_category_index == '':
+            self.showing_help = True
+            self.render_root_preview()
             return
         to_category_index = int(to_category_index) - 1
         to_category = list(self.config['states'][to_category_index].keys())[0]
@@ -149,6 +158,8 @@ class MeetDown:
         if self.data[entity][from_category]:
             self.data[entity][from_category].remove(item)
         self.data[entity][to_category].append(item)
+        self.showing_help = True
+        self.render_root_preview()
 
     def add_entity(self, entity):
         self.data[entity] = {list(states.keys())[0]: []
@@ -169,7 +180,7 @@ class MeetDown:
         item_count = 0
         # Print all item types and let the user select one
         items = []
-        print(f"{self.config['separator-2']}\n\n{self.config['prompt-add']}\n")
+        print(f"{self.config['prompt-add']}:\n")
 
         for i, item_type in enumerate(item_types, start=1):
             for n, entity in enumerate(sorted(self.data), start=1):
@@ -184,11 +195,15 @@ class MeetDown:
 
         item_type_index = input(f"\n{self.config['prompt-main']}: ")
         if item_type_index == '' or item_type_index.isdigit() == False:
+            self.showing_help = True
+            self.render_root_preview()
             return
 
         if int(item_type_index) - 1 > len(items):
             print(
                 f"{self.config['invalid']}\nShould be between 1 and {len(items)}")
+            self.showing_help = True
+            self.render_root_preview()
             return
 
         item = items[int(item_type_index) - 1]
@@ -213,6 +228,8 @@ class MeetDown:
                 external_ticket = ''
             description = input(f"Enter {selected_item_type} description: ")
             if description == '':  # if input is empty, return to main menu
+                self.showing_help = True
+                self.render_root_preview()
                 return
 
             # Add the new item to the selected category for the selected entity
@@ -222,6 +239,8 @@ class MeetDown:
             print(f"New {selected_item_type} item added for {selected_entity}.")
 
     def add_item(self, entity, item_type, external_ticket, description):
+        self.showing_help = True
+        self.render_root_preview()
         self.data[entity][item_type].append({
             "external_ticket": external_ticket,
             "description": description
@@ -238,12 +257,16 @@ class MeetDown:
         print(f"\nCurrent value: {editable[ticket_key]}")
         input_text = input(f"\nNew value: ")
         if input_text == '':
+            self.showing_help = True
+            self.render_root_preview()
             return None, None, None
         else:
+            self.showing_help = True
+            self.render_root_preview()
             return editable, ticket_or_description, input_text
 
     def edit_prompt(self):
-        print("\nEditables:\n")
+        print("Edit Options:\n")
         for i, editable in enumerate(self.editables(), start=1):
             ticket = f"-{editable['external_ticket']}" if editable['external_ticket'] else ""
             print(
@@ -253,11 +276,15 @@ class MeetDown:
             "\nSelect an editable item by entering the number: ")
         if not selected_index.isdigit():
             print(f"{self.config['invalid']}")
+            self.showing_help = True
+            self.render_root_preview()
             return None
 
         selected_index = int(selected_index)
         if selected_index < 1 or selected_index > len(self.editables()):
             print(f"{self.config['invalid']}")
+            self.showing_help = True
+            self.render_root_preview()
             return None
 
         selected_editable = self.editables()[selected_index - 1]
@@ -279,6 +306,8 @@ class MeetDown:
                               ][type][i][option_key] = new_value
                     print(f"✅ {data[editable['entity']][type][i][option_key]}")
                     continue
+        self.showing_help = True
+        self.render_root_preview()
         return data, self.config
 
     def users(self):
@@ -298,11 +327,15 @@ class MeetDown:
             "\nSelect an item by entering the number: ")
         if not selected_item_index.isdigit():
             print(f"{self.config['invalid']}")
+            self.showing_help = True
+            self.render_root_preview()
             return None
 
         selected_item_index = int(selected_item_index)
         if selected_item_index < 1 or selected_item_index > len(self.editables()):
             print(f"{self.config['invalid']}")
+            self.showing_help = True
+            self.render_root_preview()
             return None
 
         selected_item = self.editables()[selected_item_index - 1]
@@ -314,11 +347,15 @@ class MeetDown:
         selected_user_index = input("\nSelect a user by entering the number: ")
         if not selected_user_index.isdigit():
             print(f"{self.config['invalid']}")
+            self.showing_help = True
+            self.render_root_preview()
             return None
 
         selected_user_index = int(selected_user_index)
         if selected_user_index < 1 or selected_user_index > len(self.data):
             print(f"{self.config['invalid']}")
+            self.showing_help = True
+            self.render_root_preview()
             return None
 
         selected_user = self.users()[selected_user_index - 1]
@@ -334,13 +371,15 @@ class MeetDown:
                     self.data[key][item['category']].remove(i)
 
         self.data[user][item['category']].append(item)
+        self.showing_help = True
+        self.render_root_preview()
 
     def remove_prompt(self):
         # Prepare a list of all items, each entity and each entity's category items
         items = []
         item_count = 0
-        padding = " "
-        print(f"\n{padding}{self.config['prompt-remove']}:\n")
+        padding = ""
+        print(f"{self.config['prompt-remove']}:\n")
         for entity, data in sorted(self.data.items()):
             # Append each entity to the list
             item_count += 1
@@ -370,6 +409,8 @@ class MeetDown:
         # Ask the user to select an item or entity to remove
         item_index = input("\nEnter the number of the item to remove: ")
         if item_index == '' or item_index.isdigit() == False:
+            self.showing_help = True
+            self.render_root_preview()
             return
         if self.config['debug']:
             print(f"data: {self.data}")
@@ -377,13 +418,19 @@ class MeetDown:
         selected_item = items[item_index]
 
         if selected_item['type'] == 'entity':
+            self.showing_help = True
+            self.render_root_preview()
             self.remove_entity(selected_item['entity'])
         else:
+            self.showing_help = True
+            self.render_root_preview()
             self.remove_item(
                 selected_item['entity'], selected_item['category'], selected_item['category_index'])
 
     def remove_item(self, entity, item_type, item_index):
         if self.data[entity][item_type][item_index] == None:
+            self.showing_help = True
+            self.render_root_preview()
             return
         self.data[entity][item_type].pop(item_index)
 
@@ -479,6 +526,8 @@ class MeetDown:
         data, config = parser.load_from_markdown(file_path)
         self.config = config
         self.data = data
+        self.showing_help = True
+        self.render_root_preview()
         return data, config
 
     def update_data_item_categories(self, data, category):
@@ -610,13 +659,22 @@ class MeetDown:
         for preview in previews:
             result.append(preview.replace("\n", ""))
 
-        if self.config['debug']:
-            result.append(
-                f"{self.config['separator-1']}\n\nOptions:\n\n{MeetDownConfig.generate_options(self.config)}")
-        else:
-            result.append(
-                f"Options: {MeetDownConfig.generate_options(self.config)}")
+        if self.showing_help:
+          if self.config['debug']:
+              result.append(
+                  f"{self.config['separator-1']}\n\nOptions:\n\n{MeetDownConfig.generate_options(self.config)}")
+          else:
+              result.append(
+                  f"Options: {MeetDownConfig.generate_options(self.config)}")
         return result
+
+    def render_root_preview(self):
+        os.system('clear')
+        # Preview
+        previews = self.render_terminal_preview(
+            self.config, self.data, True)
+        for preview in previews:
+            print(preview)
 
     def meetdown(self, args, config, data):
         self.data = data
@@ -625,12 +683,7 @@ class MeetDown:
 
         while True:
 
-            os.system('clear')
-            # Preview
-            previews = self.render_terminal_preview(
-                self.config, self.data, True)
-            for preview in previews:
-                print(preview)
+            self.render_root_preview()
             self.ensure_default_states_items_exist_in_data()
             selected_option = input(f"{self.config['prompt-main']}: ")
 
@@ -642,6 +695,8 @@ class MeetDown:
 
             try:
                 selected_option = int(selected_option)
+                self.showing_help = False
+                self.render_root_preview()
             except ValueError:
                 print(f"\n{self.config['error-invalid-option']}\n")
                 continue
@@ -654,11 +709,15 @@ class MeetDown:
             elif selected_option == 3:
                 file_path = input(f"{self.config['prompt-save-location']}: ")
                 if not file_path:
+                    self.showing_help = True
+                    self.render_root_preview()
                     continue
                 loaded_data, config = self.load_from_markdown(file_path)
                 if loaded_data is not None and config is not None:
                     self.data = loaded_data
                     self.config = config
+                    self.showing_help = True
+                    self.render_root_preview()
             elif selected_option == 4:
                 self.toggle_prompt()
             elif selected_option == 5:
