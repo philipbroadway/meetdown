@@ -36,12 +36,12 @@ class MeetDown:
 
     def parse_arguments(self):
         now = self.utils.now()
-        whoiam = self.utils.whoami()
+        # whoiam = self.utils.whoami()
         parser = argparse.ArgumentParser(
             description='Process command-line arguments.')
         parser.add_argument(
             '--title', type=str, default=f"meetdown-{now}", help='Title (default: aws-p13.md)')
-        parser.add_argument('--entities', type=str, default=whoiam,
+        parser.add_argument('--entities', type=str, default='',
                             help='Comma separated people or entities (example: pike13,aws-sales)')
         parser.add_argument('--out', type=str, default=MeetDownUtils.pwd(),
                             help='Save directory path (default: empty string)')
@@ -200,7 +200,7 @@ class MeetDown:
                 items.append(
                     {"index": item_count, "entity": entity, "item_type": item_type})
         item_count += 1
-        print(f"{item_count}. New person {self.config['id']}")
+        print(f"{item_count}. ✍️ Add new entity name/emojii")
         items.append({"index": item_count+1,
                      "entity": self.config['id'], "item_type": self.config['id']})
 
@@ -224,10 +224,14 @@ class MeetDown:
         selected_item_type = item['item_type']
 
         if selected_entity == self.config['id']:
-            new_root = input(f"Enter name for {self.config['desc']}: ")
+            new_root = input(f"Enter a name or emojii & press enter: ")
+            if new_root == '':
+                self.showing_help = True
+                self.render_root_preview()
+                return
             # Initialize an empty list for each category in config's context
             self.add_entity(new_root)
-            print(f"➕  '{new_root}'")
+            # print(f"➕  '{new_root}'")
 
         else:
             # Ask for the details of the new item
@@ -402,7 +406,7 @@ class MeetDown:
             # Append each entity to the list
             item_count += 1
             print(
-                f"{padding}{padding}{item_count}. {self.config['id']} {entity}")
+                f"{padding}{padding}{item_count}. {entity}")
             items.append({
                 "index": item_count,
                 "entity": entity,
@@ -413,8 +417,7 @@ class MeetDown:
             for category, category_items in data.items():
                 for category_index, item in enumerate(category_items):
                     item_count += 1
-                    print(
-                        f"{padding}{padding}{item_count}. {entity}-{category}-{item['description']}")
+                    print(f"{padding}{padding}{item_count}. {entity}-{category}-{item['description']}")
                     items.append({
                         "index": item_count,
                         "entity": entity,
@@ -683,7 +686,7 @@ class MeetDown:
             result.append(preview.replace("\n", ""))
 
         result.append(
-            "_________________________________________________________________________________________________________\n")
+            "___________________________________________________________________________________________________________________\n")
         if self.showing_help:
             if self.config['debug']:
                 result.append(
