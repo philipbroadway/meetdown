@@ -132,6 +132,8 @@ class MeetDown:
 
         item_index = input(f"\nToggle which item?: ")
         if item_index == '':  # if input is empty, return to main menu
+            self.showing_help = True
+            self.render_root_preview()
             return
         item_index = int(item_index) - 1
 
@@ -149,7 +151,8 @@ class MeetDown:
             return
         to_category_index = int(to_category_index) - 1
         to_category = list(self.config['states'][to_category_index].keys())[0]
-
+        self.showing_help = True
+        self.render_root_preview()
         self.toggle_status(entity, from_category, to_category, item)
 
     def toggle_status(self, entity, from_category, to_category, item):
@@ -158,8 +161,6 @@ class MeetDown:
         if self.data[entity][from_category]:
             self.data[entity][from_category].remove(item)
         self.data[entity][to_category].append(item)
-        self.showing_help = True
-        self.render_root_preview()
 
     def add_entity(self, entity):
         self.data[entity] = {list(states.keys())[0]: []
