@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 import panflute as pf
 import datetime
 import argparse
+import subprocess
 ASCII = """
 ┌┬┐┌─┐┌─┐┌┬┐┌┬┐┌─┐┬ ┬┌┐┌
 │││├┤ ├┤  │  │││ │││││││
@@ -15,6 +16,7 @@ ASCII = """
 ________________________
 """
 NAME = "#"
+
 
 class MeetDown:
     @staticmethod
@@ -337,7 +339,7 @@ class MeetDown:
             self.showing_help = True
             self.render_root_preview()
             return None
-        
+
         selected_item_index = int(selected_item_index)
         if selected_item_index < 1 or selected_item_index > len(self.editables()):
             print(f"{self.config['invalid']}")
@@ -581,8 +583,12 @@ class MeetDown:
             for line in self.preview(self.data):
                 file.write(line)
         if buhbye:
-            print(f"\n kthx👋")
-        print(f"\n 💾: file:/{MeetDownUtils.pwd()}/{filename}\n")
+            self.showing_help = False
+            self.render_root_preview()
+        subprocess.run("pbcopy", text=True,
+                       input=f"{MeetDownUtils.pwd()}/{filename}")
+        print(
+            f"(auto-save) 💾: {MeetDownUtils.pwd()}/{filename}\n")
 
     def ensure_default_states_items_exist_in_data(self):
         allkeys = self.states()
@@ -667,13 +673,15 @@ class MeetDown:
         for preview in previews:
             result.append(preview.replace("\n", ""))
 
+        result.append(
+            "_________________________________________________________________________________________________________________________\n")
         if self.showing_help:
-          if self.config['debug']:
-              result.append(
-                  f"{self.config['separator-1']}\n\nOptions:\n\n{MeetDownConfig.generate_options(self.config)}")
-          else:
-              result.append(
-                  f"Options: {MeetDownConfig.generate_options(self.config)}")
+            if self.config['debug']:
+                result.append(
+                    f"{self.config['separator-1']}\n\nOptions:\n\n{MeetDownConfig.generate_options(self.config)}")
+            else:
+                result.append(
+                    f"Options: {MeetDownConfig.generate_options(self.config)}")
         return result
 
     def render_root_preview(self):
@@ -751,7 +759,8 @@ class MeetDown:
             self.utils.clear_screen()
             print(f"{ASCII}")
             # print(f"\n⚪ To create new  <Type a name & press return>\n⚪ To resume <Press return to resume>")
-            title = input(f"\nEnter a name to create new meeting; Or press enter to resume previous meeting\n> ")
+            title = input(
+                f"Enter a name to create new meeting; Or press enter to resume previous meeting\n> ")
             empty_title = title == None or title == ""
             print(f"title: {title}")
             if empty_title:
