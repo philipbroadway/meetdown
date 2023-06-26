@@ -145,12 +145,12 @@ class MeetDown:
         self.showing_help = False
         self.render_root_preview()
         # Now, let the user select the new category
-        print(f"{item['description']}\n")
+        print(f"Toggle: {all_items[item_index][1]} {item['description']}\n")
         for i, states in enumerate(self.config['states'], start=1):
-            current = "(current)" if all_items[item_index][1] == list(states.keys())[0] else ""
+            
 
 
-            print(f"{i}. {list(states.keys())[0]} {current}")
+            print(f"{i}. {list(states.keys())[0]}")
         to_category_index = input(
             "\nSelect the new status by entering the number: ")
         if to_category_index == '':
