@@ -27,10 +27,18 @@ cd meetdown && pip install -r requirements.txt
 
 # Running app
 python meetdown.py
+```
 
+#### Meeting example
+
+```
 # Start with set entities/people to add/toggle/edit/remove
 python meetdown.py --entities person1,person2,someBiz1,someBiz2
+```
 
+#### Standup example
+
+```
 # Useful setup for standups
 python meetdown.py --entities "↪️ -Previous,📅-Today,🗂️ -Backlog"'
 ```
