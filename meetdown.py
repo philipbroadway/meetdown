@@ -100,14 +100,14 @@ class MeetDown:
         return f"[{id}]({self.config['external']['url']}{id})"
 
     def toggle_prompt(self):
-
+        
         print("Toggle Options:\n\n1. Toggle owner\n2. Toggle status\n")
         selected_option = input("Enter a number: ")
         if not selected_option.isdigit():
             self.showing_help = True
             self.render_root_preview()
             return None
-
+        
         if int(selected_option) == 1:
             self.showing_help = True
             self.render_root_preview()
@@ -126,7 +126,9 @@ class MeetDown:
             self.render_root_preview()
             return
         spacer = " "
-
+        self.showing_help = False
+        self.render_root_preview()
+        print("Togglable items:\n")
         # Now, print all items and let the user select one
         for i, (entity, category, item) in enumerate(all_items, start=1):
             print(f"{spacer}{i}. {entity}-{category}-{item['description']}")
@@ -329,7 +331,7 @@ class MeetDown:
     def reassign(self):
         self.showing_help = False
         self.render_root_preview()
-        print("Items with owners:\n")
+        print("Togglable items:\n")
         for i, item in enumerate(self.editables(), start=1):
             print(
                 f"{i}. {item['entity']}-{item['category']}-{item['description']}")
@@ -384,7 +386,6 @@ class MeetDown:
 
         self.data[user][item['category']].append(item)
         self.showing_help = True
-        self.render_root_preview()
 
     def remove_prompt(self):
         # Prepare a list of all items, each entity and each entity's category items
