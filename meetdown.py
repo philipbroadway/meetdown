@@ -101,7 +101,7 @@ class MeetDown:
 
     def toggle_prompt(self):
         
-        print("Toggle Options:\n\n1. Toggle owner\n2. Toggle status\n")
+        print(f"{self.config['prompt-toggle']} Options:\n\n1. Reassign\n2. Toggle status\n")
         selected_option = input("Enter a number: ")
         if not selected_option.isdigit():
             self.showing_help = True
@@ -191,16 +191,16 @@ class MeetDown:
         item_count = 0
         # Print all item types and let the user select one
         items = []
-        print(f"{self.config['prompt-add']} options:\n")
+        print(f"{self.config['prompt-add']}able items:\n")
 
         for i, item_type in enumerate(item_types, start=1):
             for n, entity in enumerate(sorted(self.data), start=1):
                 item_count += 1
-                print(f"{item_count}. {entity}-{item_type}")
+                print(f"{item_count}. {entity} {item_type}")
                 items.append(
                     {"index": item_count, "entity": entity, "item_type": item_type})
         item_count += 1
-        print(f"{item_count}. {self.config['id']}")
+        print(f"{item_count}. New person {self.config['id']}")
         items.append({"index": item_count+1,
                      "entity": self.config['id'], "item_type": self.config['id']})
 
@@ -282,7 +282,7 @@ class MeetDown:
             return editable, ticket_or_description, input_text
 
     def edit_prompt(self):
-        print("Edit Options:\n")
+        print(f"{self.config['prompt-edit']}able Items:\n")
         for i, editable in enumerate(self.editables(), start=1):
             ticket = f"-{editable['external_ticket']}" if editable['external_ticket'] else ""
             print(
@@ -336,13 +336,13 @@ class MeetDown:
     def reassign(self):
         self.showing_help = False
         self.render_root_preview()
-        print("Togglable items:\n")
+        print("Assignable items:\n")
         for i, item in enumerate(self.editables(), start=1):
             print(
                 f"{i}. {item['entity']}-{item['category']}-{item['description']}")
 
         selected_item_index = input(
-            "\nEnter the number of the item to toggle: ")
+            "\nEnter the number of the item to reassign: ")
         if not selected_item_index.isdigit():
             print(f"{self.config['invalid']}")
             self.showing_help = True
@@ -359,7 +359,7 @@ class MeetDown:
         selected_item = self.editables()[selected_item_index - 1]
         self.showing_help = False
         self.render_root_preview()
-        print("Assignable Users:\n")
+        print("Assign to:\n")
         for i, user in enumerate(self.users(), start=1):
             print(f"{i}. {user}")
 

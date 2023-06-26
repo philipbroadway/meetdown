@@ -132,11 +132,8 @@ def test_add_entity(meetdown):
 
     # Verify that the entity has been added with all categories from the config
     assert "Entity 1" in meetdown.data
-    assert meetdown.data["Entity 1"] == {
-        "⬜": [],
-        "✅": []
-    }
-
+    for key in meetdown.status_types():
+        assert meetdown.data["Entity 1"][key] == []
 
 def test_remove_item(meetdown):
     # Set up initial data
