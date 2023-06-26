@@ -16,7 +16,6 @@ ________________________
 """
 NAME = "#"
 
-
 class MeetDown:
     @staticmethod
     def default_config():
@@ -206,7 +205,8 @@ class MeetDown:
             self.showing_help = True
             self.render_root_preview()
             return
-
+        self.showing_help = False
+        self.render_root_preview()
         item = items[int(item_type_index) - 1]
 
         selected_entity = item['entity']
@@ -252,9 +252,13 @@ class MeetDown:
             "\nOptions:\n\n1. Edit Ticket\n2. Edit Description\n\nSelect an option by entering the number: ")
         if not ticket_or_description.isdigit():
             print("Invalid input. Please enter a number.")
+            self.showing_help = True
+            self.render_root_preview()
             return None, None, None
         ticket_or_description = 1 if int(ticket_or_description) == 1 else 2
         ticket_key = 'external_ticket' if ticket_or_description == 1 else 'description'
+        self.showing_help = False
+        self.render_root_preview()
         print(f"\nCurrent value: {editable[ticket_key]}")
         input_text = input(f"\nNew value: ")
         if input_text == '':
@@ -280,7 +284,8 @@ class MeetDown:
             self.showing_help = True
             self.render_root_preview()
             return None
-
+        self.showing_help = False
+        self.render_root_preview()
         selected_index = int(selected_index)
         if selected_index < 1 or selected_index > len(self.editables()):
             print(f"{self.config['invalid']}")
@@ -318,20 +323,21 @@ class MeetDown:
         return result
 
     def reassign(self):
-
-        print("\nItems:\n")
+        self.showing_help = False
+        self.render_root_preview()
+        print("Items with owners:\n")
         for i, item in enumerate(self.editables(), start=1):
             print(
                 f"{i}. {item['entity']}-{item['category']}-{item['description']}")
 
         selected_item_index = input(
-            "\nSelect an item by entering the number: ")
+            "\nEnter the number of the item to toggle: ")
         if not selected_item_index.isdigit():
             print(f"{self.config['invalid']}")
             self.showing_help = True
             self.render_root_preview()
             return None
-
+        
         selected_item_index = int(selected_item_index)
         if selected_item_index < 1 or selected_item_index > len(self.editables()):
             print(f"{self.config['invalid']}")
@@ -340,8 +346,9 @@ class MeetDown:
             return None
 
         selected_item = self.editables()[selected_item_index - 1]
-
-        print("\nUsers:\n")
+        self.showing_help = False
+        self.render_root_preview()
+        print("Assignable Users:\n")
         for i, user in enumerate(self.users(), start=1):
             print(f"{i}. {user}")
 
