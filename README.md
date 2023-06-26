@@ -30,6 +30,9 @@ python meetdown.py
 
 # Start with set entities/people to add/toggle/edit/remove
 python meetdown.py --entities person1,person2,someBiz1,someBiz2
+
+# Useful setup for standups
+python meetdown.py --entities "↪️ -Previous,📅-Today,🗂️ -Backlog"'
 ```
 
 ### Run in Docker

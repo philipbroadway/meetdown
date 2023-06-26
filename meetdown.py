@@ -630,7 +630,7 @@ class MeetDown:
         result = []
         if compact:
             result = [
-                f"{self.states()[1]} MeetDown://{self.config['title']}{now}", ""]
+                f"{self.states()[1]} MeetDown://{self.config['title']} @ {now}", ""]
         else:
             result = [f"{NAME} {self.config['title']} @ {now}", "\n\n"]
         interval = 0
