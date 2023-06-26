@@ -171,6 +171,8 @@ class MeetDown:
             self.data[entity] = {}
             for category in self.config['states']:
                 self.data[entity][list(category.keys())[0]] = []
+        self.showing_help = True
+        self.render_root_preview()
 
     def remove_entity(self, entity):
         if entity in self.data:
