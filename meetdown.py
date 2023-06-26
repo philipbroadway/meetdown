@@ -587,8 +587,9 @@ class MeetDown:
             self.render_root_preview()
         subprocess.run("pbcopy", text=True,
                        input=f"{MeetDownUtils.pwd()}/{filename}")
+        savetype = buhbye and "auto-saved" or "saved"
         print(
-            f"(auto-save) 💾: {MeetDownUtils.pwd()}/{filename}\n")
+            f"({savetype}) 💾: {MeetDownUtils.pwd()}/{filename}\n")
 
     def ensure_default_states_items_exist_in_data(self):
         allkeys = self.states()
