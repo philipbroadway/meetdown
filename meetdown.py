@@ -99,7 +99,7 @@ class MeetDown:
 
     def toggle_prompt(self):
 
-        print("Options:\n\n1. Toggle owner\n2. Toggle status ")
+        print("\nToggle Options:\n\n1. Toggle owner\n2. Toggle status\n")
         selected_option = input("Enter a number: ")
         if not selected_option.isdigit():
             return None
@@ -682,9 +682,9 @@ class MeetDown:
         # Check if the temporary file exists
         if os.path.exists(self.config['tmp']):
             self.utils.clear_screen()
-            print(f"{ASCII}\n")
+            print(f"{ASCII}")
             print(f"\nOptions:\n\n⚪ Create New MeetDown  <Type a name & press return>\n⚪ Resume Last MeetDown <Press return to resume>")
-            title = input(f"\n  meetdown > ")
+            title = input(f"\n> ")
             empty_title = title == None or title == ""
             print(f"title: {title}")
             if empty_title:
