@@ -142,12 +142,17 @@ class MeetDown:
 
         # Get the selected item and its details
         entity, from_category, item = all_items[item_index]
-
+        self.showing_help = False
+        self.render_root_preview()
         # Now, let the user select the new category
+        print(f"{item['description']}\n")
         for i, states in enumerate(self.config['states'], start=1):
-            print(f"{i}. {list(states.keys())[0]}")
+            current = "(current)" if all_items[item_index][1] == list(states.keys())[0] else ""
+
+
+            print(f"{i}. {list(states.keys())[0]} {current}")
         to_category_index = input(
-            "Select the new category of the item by entering the number: ")
+            "\nSelect the new status by entering the number: ")
         if to_category_index == '':
             self.showing_help = True
             self.render_root_preview()
@@ -678,7 +683,7 @@ class MeetDown:
             result.append(preview.replace("\n", ""))
 
         result.append(
-            "_________________________________________________________________________________________________________________________\n")
+            "_________________________________________________________________________________________________________\n")
         if self.showing_help:
             if self.config['debug']:
                 result.append(
