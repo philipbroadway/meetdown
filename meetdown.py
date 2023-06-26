@@ -182,7 +182,7 @@ class MeetDown:
         item_count = 0
         # Print all item types and let the user select one
         items = []
-        print(f"{self.config['prompt-add']}:\n")
+        print(f"{self.config['prompt-add']} options:\n")
 
         for i, item_type in enumerate(item_types, start=1):
             for n, entity in enumerate(sorted(self.data), start=1):
@@ -389,7 +389,7 @@ class MeetDown:
         items = []
         item_count = 0
         padding = ""
-        print(f"{self.config['prompt-remove']}:\n")
+        print(f"{self.config['prompt-remove']} options:\n")
         for entity, data in sorted(self.data.items()):
             # Append each entity to the list
             item_count += 1
