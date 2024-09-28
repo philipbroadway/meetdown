@@ -3,7 +3,7 @@
 │││├┤ ├┤  │  │││ │││││││
 ┴ ┴└─┘└─┘ ┴ ─┴┘└─┘└┴┘┘└┘
 ```
-> Markdown editor for meetups
+> markdown editor for mtg's
 
 [![Pytest](https://github.com/frontdesk/meetdown/actions/workflows/pytest.yml/badge.svg)](https://github.com/frontdesk/meetdown/actions/workflows/pytest.yml)
 
